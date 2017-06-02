@@ -1,5 +1,8 @@
 """Mixins for building configurations for commands."""
 
+from collections.abc import Callable
+from itertools import chain
+import importlib
 import logging
 import os
 import pprint
@@ -14,57 +17,35 @@ class UnknownFormatError(Exception):
     """Raised when an unsupported configuration file format is encountered."""
 
 
-class BaseConfig:
-    """Base class for creating custom configuration objects."""
+DEFAULT_LOADERS = {'toml': 'toml', 
+                   'yaml': ('yaml', 'yml')}
 
-    def __new__(cls):
-        valid = {name: attr for base in cls.__bases__ + (cls,)
-                 for name, attr in base.__dict__.items()
-                 if not name.startswith('_')}
 
-        obj = super().__new__(cls)
-        obj._valid = valid
-        return obj
+class Mixin:
+    def __call__(self, config):
+        return config
+
+
+class Loader(Mixin):
+    """Mixin to load configuration from a file."""
 
     def __init__(self):
         loaders = {}
-        try:
-            import toml
-        except ImportError:
-            pass
-        else:
-            loaders['toml'] = toml.load
-
-        try:
-            import yaml
-        except ImportError:
-            pass
-        else:
-            loaders['yaml'] = loaders['yml'] = yaml.load
-
+        for module_name, extensions in DEFAULT_LOADERS.items():
+            try:
+                module = importlib.import_module(module_name)
+            except ImportError:
+                pass
+            else:
+                if isinstance(extensions, str):
+                    extensions = [extensions]
+                for ext in extensions:
+                    loaders[ext] = getattr(module, 'load')
         self._loaders = loaders
 
-    def __call__(self, task, path=None):
-        """Build the configuration according to validation.
-
-        If there is a missing entry and validation provides an object
-        for that entry this object is used as the default value,
-        if the validation for that entry is a type a ``MissingConfigError``
-        exception is raised. The types of the values in the configuration are
-        checked against validation, if there is a type mismatch a ``TypeError``
-        is raised.
-
-        Parameters
-        ----------
-        task: str
-            the name of the task (name of config file without extension)
-        path: str
-            the path where the configuration file exists
-        """
-        if path is None:
-            path = '.'
+    def __call__(self, task, path):
         config = self._load(task, path)
-        self._validate(config)
+        super().__call__(config)
         return config
 
     def _load(self, task, path):
@@ -74,6 +55,7 @@ class BaseConfig:
         path = Path(path)
         logging.debug("Searching config files in '{!s}'.".format(path))
         config_files = list(path.glob(task + '.*'))
+        print("CONFIG FILES:", config_files)
         config_files = iter(config_files)
         try:
             fname = next(config_files)
@@ -90,6 +72,32 @@ class BaseConfig:
             logging.debug('Loading configuration %s with %s ', path, file_extension)
             res = loader(fname)
             return res
+
+
+class Checker(Mixin):
+    """Mixin to validate configuration."""
+
+    def __new__(cls):
+        valid = {name: attr for base in chain(reversed(cls.__bases__), (cls,))
+                 for name, attr in base.__dict__.items()
+                 if not name.startswith('_')}
+
+        obj = super().__new__(cls)
+        obj._valid = valid
+        return obj
+
+    def __call__(self, *args, **kwargs):
+        """Build the configuration according to validation.
+
+        If there is a missing entry and validation provides an object
+        for that entry this object is used as the default value,
+        if the validation for that entry is a type a ``MissingConfigError``
+        exception is raised. The types of the values in the configuration are
+        checked against validation, if there is a type mismatch a ``TypeError``
+        is raised."""
+        config = super().__call__(*args, **kwargs)
+        self._validate(config)
+        return config
 
     def _validate(self, config):
         """Fill config with default entries and validate values."""
