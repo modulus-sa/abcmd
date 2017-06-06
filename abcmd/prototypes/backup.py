@@ -1,11 +1,18 @@
 """Prototype classes for Backup command (borg, rsync)"""
 
+import abc
+import datetime as dt
 import logging
+import shlex
+import subprocess as sp
+import smtplib
 
-from abcmd import BaseConfig, BaseCommand
+from abcmd import BaseCommand
+from abcmd.config import Checker, Loader
+from abcmd.utils import log_error_and_exit
 
 
-class BackupConfig(BaseConfig):
+class BackupConfig(Checker, Loader):
     """Prototype configuration for borg/rsync"""
     allowed_hours = list
     disabled = False
@@ -89,5 +96,3 @@ class Backup(BaseCommand):
             server.sendmail(e_from, e_to, msg)
         except Exception as err:
             logging.warning('Could not send email: {}'.format(err))
-
-

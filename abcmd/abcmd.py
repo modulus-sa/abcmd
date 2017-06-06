@@ -99,9 +99,9 @@ class BaseCommand(abc.ABC):
         self.dry_run = False
         self._cache = {}
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, dry_run=False, **kwargs):
         """Run the procedure."""
-        self.dry_run = kwargs.get('dry_run', False)
+        self.dry_run = dry_run
         if self.dont_run():
             return
         self.run(*args, **kwargs)
