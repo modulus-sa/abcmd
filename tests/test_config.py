@@ -171,3 +171,30 @@ def test_mixin_inheritance_integration_Loader_Checker(config_file):
     config = Config(config_file['task'], config_file['path'])
 
     assert config.config == {'option': 'a', 'test_entry': 'ok'}
+
+
+def test_Config_getitem():
+    class Config(Checker):
+        option = 'a'
+
+    config = Config({})
+
+    assert config['option'] == 'a'
+
+
+def test_mixin_Loader_Checker_fills_default_values(config_file):
+    class Config(Loader, Checker):
+        option = 'a'
+
+    config = Config(config_file['task'], config_file['path'])
+
+    assert config['option'] == 'a' and config['test_entry'] == 'ok'
+
+
+def test_mixin_Checker_Loader_fills_default_values(config_file):
+    class Config(Checker, Loader):
+        option = 'a'
+
+    config = Config(config_file['task'], config_file['path'])
+
+    assert config['option'] == 'a' and config['test_entry'] == 'ok'

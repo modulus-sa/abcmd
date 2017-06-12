@@ -15,7 +15,6 @@ from abcmd.utils import log_error_and_exit
 class BackupConfig(Checker, Loader):
     """Prototype configuration for borg/rsync"""
     allowed_hours = list
-    disabled = False
     email_from = str
     email_to = str
     exclude = []
@@ -24,6 +23,8 @@ class BackupConfig(Checker, Loader):
     verbose = False
     pre_scripts = list
     post_scripts = list
+    disabled = False
+    LALALA = 10
 
 
 class Backup(BaseCommand):

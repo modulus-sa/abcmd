@@ -31,8 +31,8 @@ class BaseConfig(abc.ABC):
             else:
                 self.config = {}
 
-    def __call__(self, *args, **kwargs):
-        pass
+    def __getitem__(self, name):
+        return self.config[name]
 
 
 class Loader(BaseConfig):
@@ -62,8 +62,7 @@ class Loader(BaseConfig):
 
         path = Path(path)
         logging.debug("Searching config files in '{!s}'.".format(path))
-        config_files = list(path.glob(task + '.*'))
-        config_files = iter(config_files)
+        config_files = iter(path.glob(task + '.*'))
         try:
             fname = next(config_files)
         except StopIteration:
@@ -87,11 +86,11 @@ class Checker(BaseConfig):
         valid = {
             name: attr
 
-            for base in [*reversed(cls.__bases__), cls]
+            for base in reversed(cls.mro())
             if issubclass(base, BaseConfig)
             and not issubclass(base, BaseCommand)
 
-            for name, attr in base.__dict__.items()
+            for name, attr in vars(base).items()
             if not name.startswith('_')
         }
         obj = super().__new__(cls)

@@ -1,6 +1,8 @@
 from abcmd import BaseCommand
 from abcmd.config import Checker, Loader
 
+from abcmd.prototypes import BackupConfig
+
 
 def test_Config_mixin_doesnt_pick_BaseCommand_subclass_attributes():
     class Config(Checker):
@@ -52,3 +54,27 @@ def test_init_calls_all_parents_init(config_file):
     assert runner.valid == {'opt0': 'option 0'}
     assert runner.cmd == 'cmd'
     assert called == [True]
+
+
+def test_Config_multi_inheritance_with_command_gets_right_valid_attr(config_file):
+    class FirstConfig(Checker, Loader):
+        option_first = 10
+
+    class SecondConfig(FirstConfig):
+        option_second = 20
+
+    class Cmd(BaseCommand, SecondConfig):
+        cmd = 'echo ok'
+
+        def run(self, *args, **kwargs):
+            pass
+
+        def dont_run(self, *args, **kwargs):
+            pass
+
+        def handle_error(self, *args, **kwargs):
+            pass
+
+    cmd = Cmd(config_file['task'], config_file['path'])
+
+    assert  cmd.valid == {'option_first': 10, 'option_second': 20}
