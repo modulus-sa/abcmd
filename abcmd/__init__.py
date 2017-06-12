@@ -73,7 +73,18 @@ class CommandFormatter(Formatter):
         return val
 
 
-class BaseCommand(abc.ABC):
+
+class CommandABC(abc.ABC):
+    """ABC for command based classes"""
+
+    def __init__(self, *args, **kwargs):
+        if args and isinstance(args[0], dict):
+            self.config = args[0]
+        else:
+            super().__init__(*args, **kwargs)
+
+
+class BaseCommand(CommandABC):
     """Base class of all command runners.
 
     Subclassing this ABC provides the following features:
@@ -97,11 +108,14 @@ class BaseCommand(abc.ABC):
 
     command = ''
 
-    def __init__(self, config):
-        self._config = config
-        self.formatter = CommandFormatter(config)
-        self.dry_run = False
+    def __init__(self, *args, **kwargs):
+        self.config = None
+        super().__init__(*args, **kwargs)
+        if self.config is None:
+            raise TypeError('missing configuration.')
         self._cache = {}
+        self.formatter = CommandFormatter(self.config)
+        self.dry_run = False
 
     def __call__(self, *args, dry_run=False, **kwargs):
         """Run the procedure."""
@@ -111,7 +125,7 @@ class BaseCommand(abc.ABC):
         self.run(*args, **kwargs)
 
     def __getitem__(self, name):
-        return self._config[name]
+        return self.config[name]
 
     def __getattr__(self, name):
         cached = self._cache.get(name)

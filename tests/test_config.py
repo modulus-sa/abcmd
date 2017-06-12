@@ -8,55 +8,36 @@ import pytest
 
 
 @pytest.fixture
-def loader_obj():
+def loader():
     class TestLoader(Loader):
         pass
-    return TestLoader()
+
+    return TestLoader
 
 
-@pytest.fixture(params=[
-    ('yaml', '---\ntest_entry: ok'),
-    ('toml', 'test_entry = "ok"\n'),
-])
-def config_file(request):
-    extension, text = request.param
-    with tempfile.NamedTemporaryFile(suffix='.' + extension) as config:
-        task = os.path.splitext(os.path.basename(config.name))[0]
-        config.write(text.encode())
-        config.seek(0)
-        yield {'task': task, 'path': os.path.dirname(config.name),
-               'file': config.name, 'loader': extension}
-
-
-def test_Loader_raises_error_on_wrong_path_name(loader_obj):
-    loader_obj = Loader()
+def test_Loader_raises_error_on_wrong_path_name(loader):
 
     with pytest.raises(FileNotFoundError):
-        loader_obj('test_task', path='/non/existing/path')
+        loader('test_task', '/non/existing/path')
 
 
-def test_Loader_raises_error_on_wrong_task_name(loader_obj):
-    loader_obj = Loader()
+def test_Loader_raises_error_on_wrong_task_name(loader):
     with pytest.raises(FileNotFoundError):
-        loader_obj('wrong_test_task_name', path='/tmp')
+        loader('wrong_test_task_name', '/tmp')
 
 
-def test_Loader_raises_error_on_unknown_file_format(loader_obj, tmpdir):
-    loader_obj = Loader()
+def test_Loader_raises_error_on_unknown_file_format(loader, tmpdir):
 
     with tempfile.NamedTemporaryFile(suffix='.unknown_extension') as temp_config:
         temp_config.write(b'')
         task = os.path.splitext(os.path.basename(temp_config.name))[0]
 
         with pytest.raises(UnknownFormatError):
-            loader_obj(task, '/tmp')
+            loader(task, '/tmp')
 
 
-def test_Loader_uses_correct_loader_with_correct_file(loader_obj, config_file, mocker):
-    class TestLoader(Loader):
-        pass
+def test_Loader_uses_correct_loader_with_correct_file(loader, config_file, mocker):
 
-    loader = TestLoader()
     loader_mock = Mock(return_value={})
     mocker.patch.dict(loader._loaders, {config_file['loader']: loader_mock})
 
@@ -66,15 +47,13 @@ def test_Loader_uses_correct_loader_with_correct_file(loader_obj, config_file, m
     assert file_arg.name == config_file['file']
 
 
-def test_Loader_with_each_loader(config_file):
-    class TestLoader(Loader):
-        test_entry = str
+def test_Loader_with_each_loader(loader, config_file):
 
-    loader = TestLoader()
+    loader_obj = loader(config_file['task'], config_file['path'])
 
-    config = loader(config_file['task'], config_file['path'])
+    print("LOADER OBJ:", loader_obj)
 
-    assert config['test_entry'] == 'ok'
+    assert loader_obj.config['test_entry'] == 'ok'
 
 
 def test_Checker_fills_valid_attribute_with_class_attributes():
@@ -82,9 +61,9 @@ def test_Checker_fills_valid_attribute_with_class_attributes():
         attr0 = 'attribute 0'
         attr1 = 'attribute 1'
 
-    checker = TestChecker()
+    checker = TestChecker({})
 
-    assert checker._valid == {'attr0': 'attribute 0', 'attr1': 'attribute 1'}
+    assert checker.valid == {'attr0': 'attribute 0', 'attr1': 'attribute 1'}
 
 
 def test_Checker_fills_default_config_if_missing():
@@ -92,11 +71,9 @@ def test_Checker_fills_default_config_if_missing():
         existing = str
         missing = 'default value'
 
-    checker = TestChecker()
+    checker = TestChecker({'existing': 'existing_value'})
 
-    config = checker({'existing': 'existing_value'})
-
-    assert config == {'existing': 'existing_value', 'missing': 'default value'}
+    assert checker.config == {'existing': 'existing_value', 'missing': 'default value'}
 
 
 def test_Checker_complains_on_missing_config():
@@ -105,10 +82,8 @@ def test_Checker_complains_on_missing_config():
         missing0 = str
         missing1 = str
 
-    checker = TestChecker()
-
     with pytest.raises(MissingConfigurationError) as err:
-        checker({'test_option': 'string'})
+        TestChecker({'test_option': 'string'})
     msg = str(err)
     # missing enries come in random order
     assert "Missing required configuration entries:" in msg
@@ -120,10 +95,8 @@ def test_Checker_complains_on_wrong_types():
     class TestChecker(Checker):
         test_option = int
 
-    checker = TestChecker()
-
     with pytest.raises(TypeError) as err:
-        checker({'test_option': 'string'})
+        TestChecker({'test_option': 'string'})
     assert str(err).endswith("test_option must be of type 'int' not 'str'")
 
 
@@ -131,10 +104,8 @@ def test_Checker_complains_on_wrong_types_with_default():
     class TestChecker(Checker):
         test_option = int
 
-    checker = TestChecker()
-
     with pytest.raises(TypeError) as err:
-        checker({'test_option': 'string'})
+        TestChecker({'test_option': 'string'})
     assert str(err).endswith("test_option must be of type 'int' not 'str'")
 
 
@@ -143,11 +114,10 @@ def test_Checker_okay():
         test_option0 = str
         test_option1 = int
 
-    checker = TestChecker()
 
-    config = checker({'test_option0': 'string', 'test_option1': 10})
+    checker = TestChecker({'test_option0': 'string', 'test_option1': 10})
 
-    assert config == {'test_option0': 'string', 'test_option1': 10}
+    assert checker.config == {'test_option0': 'string', 'test_option1': 10}
 
 
 def test_Checker_has_attrs_from_all_baseclasses():
@@ -161,9 +131,9 @@ def test_Checker_has_attrs_from_all_baseclasses():
         option3 = 3
         overriden = 'b'
 
-    checker = SecondChecker()
+    checker = SecondChecker({})
 
-    assert checker._valid == {'option0': 0, 'option1': 1,
+    assert checker.valid == {'option0': 0, 'option1': 1,
                               'option2': 2, 'option3': 3,
                               'overriden': 'b'}
 
@@ -180,28 +150,24 @@ def test_Checker_overrides_options_in_right_order():
     class ThirdChecker(SecondChecker):
         overriden = 'c'
 
-    checker = ThirdChecker()
+    checker = ThirdChecker({})
 
-    assert checker._valid == {'option': 1, 'overriden': 'c'}
+    assert checker.valid == {'option': 1, 'overriden': 'c'}
 
 
 def test_mixin_inheritance_integration_Checker_Loader(config_file):
     class Config(Checker, Loader):
         option = 'a'
 
-    config = Config()
+    config = Config(config_file['task'], config_file['path'])
 
-    res = config(config_file['task'], config_file['path'])
-
-    assert res == {'option': 'a', 'test_entry': 'ok'}
+    assert config.config == {'option': 'a', 'test_entry': 'ok'}
 
 
 def test_mixin_inheritance_integration_Loader_Checker(config_file):
     class Config(Loader, Checker):
         option = 'a'
 
-    config = Config()
+    config = Config(config_file['task'], config_file['path'])
 
-    res = config(config_file['task'], config_file['path'])
-
-    assert res == {'option': 'a', 'test_entry': 'ok'}
+    assert config.config == {'option': 'a', 'test_entry': 'ok'}

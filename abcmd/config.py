@@ -1,12 +1,13 @@
 """Mixins for building configurations for commands."""
 
-from collections.abc import Callable
-from itertools import chain
+import abc
 import importlib
 import logging
 import os
 import pprint
 from pathlib import Path
+
+from abcmd import BaseCommand
 
 
 class MissingConfigurationError(Exception):
@@ -22,32 +23,38 @@ DEFAULT_LOADERS = {'toml': 'toml',
                    'yaml': ('yaml', 'yml')}
 
 
-class Mixin:
-    def __call__(self, config):
-        return config
+class BaseConfig(abc.ABC):
+    def __init__(self, *args, **kwargs):
+        if not hasattr(self, 'config'):
+            if args and isinstance(args[0], dict):
+                self.config = args[0]
+            else:
+                self.config = {}
+
+    def __call__(self, *args, **kwargs):
+        pass
 
 
-class Loader(Mixin):
+class Loader(BaseConfig):
     """Mixin to load configuration from a file."""
 
-    def __init__(self):
-        loaders = {}
-        for module_name, extensions in DEFAULT_LOADERS.items():
-            try:
-                module = importlib.import_module(module_name)
-            except ImportError:
-                pass
-            else:
-                if isinstance(extensions, str):
-                    extensions = [extensions]
-                for ext in extensions:
-                    loaders[ext] = getattr(module, 'load')
-        self._loaders = loaders
+    _loaders = {}
+    for _module_name, _extensions in DEFAULT_LOADERS.items():
+        try:
+            _module = importlib.import_module(_module_name)
+        except ImportError:
+            pass
+        else:
+            if isinstance(_extensions, str):
+                _extensions = [_extensions]
+            for _ext in _extensions:
+                _loaders[_ext] = getattr(_module, 'load')
 
-    def __call__(self, task, path):
-        config = self._load(task, path)
-        super().__call__(config)
-        return config
+    def __init__(self, *args, **kwargs):
+        self.task = args[0]
+        self.path = args[1]
+        self.config = self._load(self.task, self.path)
+        super().__init__(*args, **kwargs)
 
     def _load(self, task, path):
         if not os.path.isdir(path):
@@ -56,7 +63,6 @@ class Loader(Mixin):
         path = Path(path)
         logging.debug("Searching config files in '{!s}'.".format(path))
         config_files = list(path.glob(task + '.*'))
-        print("CONFIG FILES:", config_files)
         config_files = iter(config_files)
         try:
             fname = next(config_files)
@@ -71,23 +77,28 @@ class Loader(Mixin):
                                      'unknown format'.format(fname))
         with fname.open('r') as fname:
             logging.debug('Loading configuration %s with %s ', path, file_extension)
-            res = loader(fname)
-            return res
+            return loader(fname)
 
 
-class Checker(Mixin):
+class Checker(BaseConfig):
     """Mixin to validate configuration."""
 
-    def __new__(cls):
-        valid = {name: attr for base in chain(reversed(cls.__bases__), (cls,))
-                 for name, attr in base.__dict__.items()
-                 if not name.startswith('_')}
+    def __new__(cls, *args, **kwargs):
+        valid = {
+            name: attr
 
+            for base in [*reversed(cls.__bases__), cls]
+            if issubclass(base, BaseConfig)
+            and not issubclass(base, BaseCommand)
+
+            for name, attr in base.__dict__.items()
+            if not name.startswith('_')
+        }
         obj = super().__new__(cls)
-        obj._valid = valid
+        obj.valid = valid
         return obj
 
-    def __call__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         """Build the configuration according to validation.
 
         If there is a missing entry and validation provides an object
@@ -96,14 +107,14 @@ class Checker(Mixin):
         exception is raised. The types of the values in the configuration are
         checked against validation, if there is a type mismatch a ``TypeError``
         is raised."""
-        config = super().__call__(*args, **kwargs)
-        self._validate(config)
-        return config
+        super().__init__(*args, **kwargs)
+        self._validate()
 
-    def _validate(self, config):
+    def _validate(self):
         """Fill config with default entries and validate values."""
+        config = self.config
         logging.debug('Checking config:\n%s', pprint.pformat(config))
-        for opt, validator in self._valid.items():
+        for opt, validator in self.valid.items():
             if opt in config:
                 if not isinstance(validator, type):
                     validator = type(validator)
@@ -117,7 +128,7 @@ class Checker(Mixin):
                     # default value
                     config[opt] = validator
                 else:
-                    missing = set(self._valid) - set(config)
+                    missing = set(self.valid) - set(config)
                     msg = ('Missing required configuration entries: '
                            '{}'.format(', '.join(missing)))
                     raise MissingConfigurationError(msg)

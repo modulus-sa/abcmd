@@ -8,7 +8,7 @@ setuptools.setup(
     author="Konstantinos Tsakiltzidis",
     author_email="laerusk@gmail.com",
 
-    description="ABCs for wrapping command with static configuration",
+    description="ABCs and Mixins for wrapping CLI commands with static configuration.",
     long_description=open('README.rst').read(),
 
     packages=setuptools.find_packages(),

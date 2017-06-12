@@ -97,21 +97,21 @@ def test_BaseCommand_init_arguments():
         def handle_error(self, err):
             pass
 
+
     with pytest.raises(TypeError) as err:
         Runner()
 
-    assert str(err).endswith("TypeError: __init__() missing 1 required "
-                             "positional argument: 'config'")
+    assert str(err).endswith("TypeError: missing configuration.")
 
 
-def test_BaseCommand_run(monkeypatch):
+def test_BaseCommand_run():
     call_list = []
 
     class Runner(BaseCommand):
         def dont_run(self):
             return False
 
-        def run(self):
+        def run(self, *args, **kwargs):
             call_list.append('run')
 
         def handle_error(self, err):
@@ -133,7 +133,7 @@ def test_BaseCommand_run_templates(mocker):
         def dont_run(self):
             return False
 
-        def run(self):
+        def run(self, *args, **kwargs):
             self.run_template()
 
         def handle_error(self, err):
@@ -158,6 +158,7 @@ def test_BaseCommand_getitem_from_config():
             pass
 
     runner = Runner({'attr0': 'attribute 0', 'attr1': 'attribute 1'})
+    runner()
 
     assert runner['attr0'] == 'attribute 0' and runner['attr1'] == 'attribute 1'
 
@@ -190,7 +191,7 @@ def test_BaseCommand_calls_handle_error_on_subprocess_error():
         def dont_run(self):
             return False
 
-        def run(self):
+        def run(self, *args, **kwargs):
             self.run_cat()
 
         def handle_error(self, cmd, error):
@@ -215,7 +216,7 @@ def test_BaseCommand_stops_if_handle_error_returns_False():
         def dont_run(self):
             return False
 
-        def run(self):
+        def run(self, *args, **kwargs):
             self.run_echo()
             handle_list.append('echo')
             self.run_cat()

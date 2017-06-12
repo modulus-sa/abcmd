@@ -11,7 +11,6 @@ from logging.handlers import SysLogHandler
 def log_error_and_exit(err):
     """Log an Exception or a string on the Error loglevel and
     exit with non-zero status code."""
-    print("LOGGING:", logging, type(logging))
     logging.error(err)
     sys.exit(2)
 
@@ -34,14 +33,3 @@ def setup_logging(proc, task):
                         style='{', level=logging.DEBUG,
                         handlers=[StreamHandler(stream=sys.stdout),
                                   SysLogHandler('/dev/log')])
-
-
-def build_wrapper(task, configpath, cmd_cls, config_cls):
-    """Build a command wrapper based on custom defined classes."""
-    loader = config_cls()
-    try:
-        config = loader(task, configpath)
-    except (MissingConfigurationError, UnknownFormatError, FileNotFoundError) as err:
-        log_error_and_exit(err)
-
-    return cmd_cls(config)
