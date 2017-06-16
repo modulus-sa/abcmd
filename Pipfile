@@ -2,12 +2,14 @@
 url = "https://pypi.python.org/simple"
 verify_ssl = true
 
-[dev-packages]
-pytest = "*"
-pytest-watch = "*"
-pytest-mock = "*"
-
 [packages]
 PyYAML = "*"
 toml = "*"
 pytest-mock = "*"
+typing = "*"
+
+[dev-packages]
+pytest = "*"
+pytest-watch = "*"
+pytest-mock = "*"
+mypy = "*"

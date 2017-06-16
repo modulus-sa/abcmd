@@ -36,3 +36,4 @@ nosetests.xml
 .pydevproject
 .cache
 tags
+.mypy_cache

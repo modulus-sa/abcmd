@@ -24,7 +24,6 @@ class BackupConfig(Checker, Loader):
     pre_scripts = list
     post_scripts = list
     disabled = False
-    LALALA = 10
 
 
 class Backup(BaseCommand):
