@@ -9,24 +9,34 @@ abcmd
    :target: no
    :alt: Latest Travis CI build status
 
-ABCs for wrapping command with static configuration
+ABCs and Mixins for wrapping shell command with static configuration.
 
 Usage
 -----
 
+The library provides the ``abcmd.BaseCommand`` ABC and two mixins
+``abcmd.config.Checker`` and ``abcmd.config.Loader`` that can be used
+to create shell command wrappers.
+
 Installation
 ------------
 
-Requirements
-^^^^^^^^^^^^
+.. code-block:: shell
+
+    $ git clone asdf
+    $ cd asdf
+    $ pip install .
+
 
 Compatibility
 -------------
+python3.5+
 
 Licence
 -------
+MIT
 
 Authors
 -------
 
-`abcmd` was written by `Konstantinos Tsakiltzidis <laerusk@gmail.com>`_.
+`abcmd` was written by `Konstantinos Tsakiltzidis <https://github.com/laerus>`_.

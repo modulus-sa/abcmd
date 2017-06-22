@@ -1,8 +1,6 @@
 from abcmd import BaseCommand
 from abcmd.config import Checker, Loader
 
-from abcmd.prototypes import BackupConfig
-
 
 def test_Config_mixin_doesnt_pick_BaseCommand_subclass_attributes():
     class Config(Checker):
