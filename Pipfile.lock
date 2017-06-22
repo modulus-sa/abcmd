@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "00039bf25bfbfa993f05276b92fcc0d9cca8d7d9b533528fc0fbd3925cfec9fc"
+            "sha256": "ea37a743cadde3cd01405f73a0247801b667489b3839abbad92b3f3b9a18edc2"
         },
         "requires": {},
         "sources": [
@@ -29,6 +29,9 @@
         "docopt": {
             "version": "==0.6.2"
         },
+        "mypy": {
+            "version": "==0.511"
+        },
         "pathtools": {
             "version": "==0.1.2"
         },
@@ -36,10 +39,7 @@
             "version": "==1.4.34"
         },
         "pytest": {
-            "version": "==3.1.1"
-        },
-        "pytest-mock": {
-            "version": "==1.6.0"
+            "version": "==3.1.2"
         },
         "pytest-watch": {
             "version": "==4.1.0"
@@ -49,6 +49,9 @@
         },
         "setuptools": {
             "version": "==36.0.1"
+        },
+        "typed-ast": {
+            "version": "==1.0.4"
         },
         "watchdog": {
             "version": "==0.8.3"

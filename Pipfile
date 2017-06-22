@@ -5,11 +5,8 @@ verify_ssl = true
 [packages]
 PyYAML = "*"
 toml = "*"
-pytest-mock = "*"
-typing = "*"
 
 [dev-packages]
 pytest = "*"
 pytest-watch = "*"
-pytest-mock = "*"
 mypy = "*"
