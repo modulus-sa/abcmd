@@ -23,10 +23,7 @@ Installation
 
 .. code-block:: shell
 
-    $ git clone asdf
-    $ cd asdf
-    $ pip install .
-
+    $ pip install abcmd
 
 Compatibility
 -------------
