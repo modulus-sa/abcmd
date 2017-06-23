@@ -8,6 +8,9 @@ abcmd
 .. image:: https://travis-ci.org/modulus-sa/abcmd.svg?branch=master
     :target: https://travis-ci.org/modulus-sa/abcmd
 
+.. image:: https://codecov.io/gh/modulus-sa/abcmd/branch/master/graph/badge.svg
+  :target: https://codecov.io/gh/modulus-sa/abcmd
+
 A library for wrapping shell commands with static configuration.
 
 Usage
