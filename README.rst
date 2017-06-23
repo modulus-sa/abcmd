@@ -5,11 +5,10 @@ abcmd
     :target: https://pypi.python.org/pypi/abcmd
     :alt: Latest PyPI version
 
-.. image:: no.png
-   :target: no
-   :alt: Latest Travis CI build status
+.. image:: https://travis-ci.org/modulus-sa/abcmd.svg?branch=master
+    :target: https://travis-ci.org/modulus-sa/abcmd
 
-ABCs and Mixins for wrapping shell command with static configuration.
+A library for wrapping shell commands with static configuration.
 
 Usage
 -----
