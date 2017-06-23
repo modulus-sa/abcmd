@@ -1,0 +1,15 @@
+language: python
+
+python:
+    - "3.5"
+
+install:
+    - "pip install -r requirements-tests.txt"
+    - "pip install ."
+
+
+script:
+    - "pytest --cov=abcmd"
+
+after_success:
+    - codecov
