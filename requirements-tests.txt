@@ -5,3 +5,5 @@ pytest
 pytest-flake8
 pytest-cov
 pytest-mock
+pytest-yaml
+pytest-toml
