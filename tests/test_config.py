@@ -2,6 +2,7 @@ import os
 import tempfile
 from unittest.mock import Mock
 
+from abcmd import config
 from abcmd.config import (Loader, Checker, MissingConfigurationError, UnknownFormatError)
 
 import pytest
@@ -15,24 +16,23 @@ def loader():
     return TestLoader
 
 
-def test_Loader_complains_on_missing_all_init_arguments():
+def test_Loader_complains_on_missing_all_init_arguments(loader):
     with pytest.raises(TypeError) as err:
-        loader = Loader()
+        loader()
     assert str(err).endswith('takes at least on argument')
 
 
-def test_Loader_defaults_to_cwd_on_init_with_one_argument():
+def test_Loader_defaults_to_cwd_on_init_with_one_argument(loader):
     with tempfile.NamedTemporaryFile(suffix='.toml') as tmp:
         os.chdir(os.path.dirname(tmp.name))
         task = os.path.splitext(os.path.basename(tmp.name))[0]
 
-        loader = Loader(task)
+        loader_obj = loader(task)
 
-    assert loader.path == os.getcwd()
+    assert loader_obj.path == os.getcwd()
 
 
 def test_Loader_raises_error_on_wrong_path_name(loader):
-
     with pytest.raises(FileNotFoundError) as err:
         loader('test_task', '/non/existing/path')
     assert 'FileNotFoundError: No such directory' in str(err)
@@ -44,7 +44,6 @@ def test_Loader_raises_error_on_wrong_task_name(loader):
 
 
 def test_Loader_raises_error_on_unknown_file_format(loader):
-
     with tempfile.NamedTemporaryFile(suffix='.unknown_extension') as temp_config:
         temp_config.write(b'')
         task = os.path.splitext(os.path.basename(temp_config.name))[0]
@@ -54,23 +53,41 @@ def test_Loader_raises_error_on_unknown_file_format(loader):
 
 
 def test_Loader_uses_correct_loader_with_correct_file(loader, config_file, mocker):
-
-    loader_mock = Mock(return_value={})
-    mocker.patch.dict(loader._loaders, {config_file['loader']: loader_mock})
-
-    loader(config_file['task'], config_file['path'])
-
-    file_arg = loader_mock.call_args[0][0]
-    assert file_arg.name == config_file['file']
-
-
-def test_Loader_with_each_loader(loader, config_file):
+    loader_mock = Mock(return_value=config_file['loader'])
+    find_loaders_mock = mocker.patch.object(loader, '_find_loaders')
+    find_loaders_mock.return_value = {config_file['loader']: loader_mock}
 
     loader_obj = loader(config_file['task'], config_file['path'])
 
-    print("LOADER OBJ:", loader_obj)
+    assert loader_obj.config == config_file['loader']
+
+
+def test_Loader_with_each_loader(loader, config_file):
+    loader_obj = loader(config_file['task'], config_file['path'])
 
     assert loader_obj.config['test_entry'] == 'ok'
+
+
+def test_Loader_staticmethod_find_loaders(config_file, mocker):
+    module_mock = Mock()
+    module_mock.load
+    import_module_mock = mocker.patch('abcmd.config.importlib.import_module')
+    import_module_mock.return_value = module_mock
+
+    loaders = Loader._find_loaders()
+
+    assert loaders[config_file['loader']] == module_mock.load
+
+def test_Checker_with_type_and_object_validation():
+    class TestChecker(Checker):
+        with_object = 'attribute 0'
+        with_type = str
+
+    conf = {'with_object': 'object', 'with_type': 'type'}
+
+    checker = TestChecker(conf)
+
+    assert checker.config ==  conf
 
 
 def test_Checker_fills_valid_attribute_with_class_attributes():
@@ -101,6 +118,7 @@ def test_Checker_complains_on_missing_config():
 
     with pytest.raises(MissingConfigurationError) as err:
         TestChecker({'test_option': 'string'})
+
     msg = str(err)
     # missing enries come in random order
     assert "Missing required configuration entries:" in msg

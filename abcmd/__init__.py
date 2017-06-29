@@ -7,11 +7,11 @@ __all__ = ('BaseCommand',)
 
 import abc
 import shlex
-import smtplib
 import subprocess as sp
 from collections.abc import Iterable
 from functools import lru_cache
 from string import Formatter
+from typing import Any, Union, Sequence, Mapping, Callable
 import logging
 
 
@@ -32,7 +32,7 @@ class CommandFormatter(Formatter):
           formatted command
     """
 
-    def __init__(self, config):
+    def __init__(self, config: Mapping[str, Any]) -> None:
         """Create a command formatter.
 
         Parameters
@@ -43,7 +43,7 @@ class CommandFormatter(Formatter):
         self.config = config
 
     @lru_cache()
-    def __call__(self, template):
+    def __call__(self, template: str) -> str:
         # don't polute self.config
         config = {}
         for key, val in self.config.items():
@@ -54,7 +54,11 @@ class CommandFormatter(Formatter):
         # remove whitespace between args caused by empty optional parameters
         return ' '.join(self.format(template, **config).split())
 
-    def get_value(self, key, args, kwargs):
+    def get_value(self, key: Union[str, int],
+                  args: Sequence[Any],
+                  kwargs: Mapping[str, Any]) -> str:
+        if not isinstance(key, str):
+            return ''
         prefix = ''
         if key.startswith('-'):
             prefix, key, *_ = key.split()
@@ -73,11 +77,10 @@ class CommandFormatter(Formatter):
         return val
 
 
-
 class CommandABC(abc.ABC):
     """ABC for command based classes"""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: dict, **kwargs: Any) -> None:
         if args and isinstance(args[0], dict):
             self.config = args[0]
         else:
@@ -108,26 +111,26 @@ class BaseCommand(CommandABC):
 
     command = ''
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.config = None
         super().__init__(*args, **kwargs)
         if self.config is None:
             raise TypeError('missing configuration.')
-        self._cache = {}
+        self._cache = {}  # type: dict
         self.formatter = CommandFormatter(self.config)
         self.dry_run = False
 
-    def __call__(self, *args, dry_run=False, **kwargs):
+    def __call__(self, *args: Any, dry_run: bool = False, **kwargs: Any) -> None:
         """Run the procedure."""
         self.dry_run = dry_run
         if self.dont_run():
             return
         self.run(*args, **kwargs)
 
-    def __getitem__(self, name):
+    def __getitem__(self, name: str) -> Union[str, int, bool, Sequence]:
         return self.config[name]
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Callable:
         cached = self._cache.get(name)
         if cached:
             return cached
@@ -136,7 +139,7 @@ class BaseCommand(CommandABC):
 
         _, template = name.split('_', maxsplit=1)
 
-        def templated():
+        def templated() -> str:
             """Format and run a command template."""
             command = self.formatter(getattr(self, template))
             return self._run_cmd(command)
@@ -146,7 +149,7 @@ class BaseCommand(CommandABC):
         self._cache[name] = templated
         return templated
 
-    def _run_cmd(self, cmd):
+    def _run_cmd(self, cmd: str) -> str:
         command = shlex.split(cmd)
         logging.debug("Running '%s':", cmd)
         if self.dry_run:
@@ -163,17 +166,19 @@ class BaseCommand(CommandABC):
             logging.error('Unhandled error: ' + msg)
             raise sp.SubprocessError(msg)
 
+        return ''
+
     @abc.abstractmethod
-    def run(self, *args, **kwargs):
+    def run(self, *args: Any, **kwargs: Any) -> None:
         """Describe the procedure."""
 
     @abc.abstractmethod
-    def dont_run(self):
+    def dont_run(self) -> bool:
         """Return True to cancel running.
         This is called before run."""
 
     @abc.abstractmethod
-    def handle_error(self, cmd, error):
+    def handle_error(self, cmd: str, error: str) -> bool:
         """Called on any error from commands. Return True
         to continue running or False to abort.
         """

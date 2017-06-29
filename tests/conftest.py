@@ -15,4 +15,4 @@ def config_file(request):
         config.write(text.encode())
         config.seek(0)
         yield {'task': task, 'path': os.path.dirname(config.name),
-               'file': config.name, 'loader': extension}
+               'name': config.name, 'loader': extension, 'file': config}

@@ -8,6 +8,8 @@ pytest-watch = "*"
 mypy = "*"
 twine = "*"
 pytest-mock = "*"
+pytest-mypy = "*"
+pytest-cov = "*"
 
 [packages]
 PyYAML = "*"
