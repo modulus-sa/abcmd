@@ -18,9 +18,12 @@ class UnknownFormatError(Exception):
     """Raised when an unsupported configuration file format is encountered."""
 
 
-# module name - extensions
-DEFAULT_LOADERS = {'toml': 'toml',
-                   'yaml': ('yaml', 'yml')}
+# module name - file extensions
+DEFAULT_LOADERS = {
+    'toml': 'toml',
+    'yaml': ('yaml', 'yml'),
+    'json': 'json',
+}
 
 
 class BaseConfig(abc.ABC):
