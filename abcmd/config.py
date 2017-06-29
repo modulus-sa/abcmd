@@ -51,8 +51,11 @@ class Loader(BaseConfig):
                 _loaders[_ext] = getattr(_module, 'load')
 
     def __init__(self, *args, **kwargs):
+        if not args:
+            msg = '{} takes at least on argument'.format(type(self))
+            raise TypeError(msg)
         self.task = args[0]
-        self.path = args[1]
+        self.path = args[1] if len(args) > 1 else os.getcwd()
         self.config = self._load(self.task, self.path)
         super().__init__(*args, **kwargs)
 
@@ -66,8 +69,8 @@ class Loader(BaseConfig):
         try:
             fname = next(config_files)
         except StopIteration:
-            raise FileNotFoundError('Could not find configuration '
-                                    'file for task {!r}'.format(task))
+            msg = 'Could not find configuration file for task {!r}'
+            raise FileNotFoundError(msg.format(task)) from None
         # first character in suffix is the dot '.'
         file_extension = fname.suffix[1:]
         loader = self._loaders.get(file_extension)

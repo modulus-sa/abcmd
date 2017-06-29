@@ -15,10 +15,27 @@ def loader():
     return TestLoader
 
 
+def test_Loader_complains_on_missing_all_init_arguments():
+    with pytest.raises(TypeError) as err:
+        loader = Loader()
+    assert str(err).endswith('takes at least on argument')
+
+
+def test_Loader_defaults_to_cwd_on_init_with_one_argument():
+    with tempfile.NamedTemporaryFile(suffix='.toml') as tmp:
+        os.chdir(os.path.dirname(tmp.name))
+        task = os.path.splitext(os.path.basename(tmp.name))[0]
+
+        loader = Loader(task)
+
+    assert loader.path == os.getcwd()
+
+
 def test_Loader_raises_error_on_wrong_path_name(loader):
 
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(FileNotFoundError) as err:
         loader('test_task', '/non/existing/path')
+    assert 'FileNotFoundError: No such directory' in str(err)
 
 
 def test_Loader_raises_error_on_wrong_task_name(loader):
@@ -26,7 +43,7 @@ def test_Loader_raises_error_on_wrong_task_name(loader):
         loader('wrong_test_task_name', '/tmp')
 
 
-def test_Loader_raises_error_on_unknown_file_format(loader, tmpdir):
+def test_Loader_raises_error_on_unknown_file_format(loader):
 
     with tempfile.NamedTemporaryFile(suffix='.unknown_extension') as temp_config:
         temp_config.write(b'')
