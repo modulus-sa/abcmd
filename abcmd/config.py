@@ -62,11 +62,9 @@ class Loader(BaseConfig):
                 extensions = [extensions]
             for ext in extensions:
                 loaders[ext] = getattr(module, 'load')
-            print("LOADERS:", loaders)
         return loaders
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        print("CALLING SUPER ON LOADER")
         if not args:
             msg = '{} takes at least on argument'.format(type(self))
             raise TypeError(msg)
@@ -127,7 +125,6 @@ class Checker(BaseConfig):
         exception is raised. The types of the values in the configuration are
         checked against validation, if there is a type mismatch a ``TypeError``
         is raised."""
-        print("CALLIN SUPER ON CHECKER")
         super().__init__(*args, **kwargs)
         # if not hasattr(self, 'valid'):
         #     self.valid = {}  # type: MutableMapping[str, Any]

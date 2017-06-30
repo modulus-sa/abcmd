@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "737ff0d5b6a24c6d0b0899aeb9d5f00049941168b2101f4f5ced3bc2bdf79f6a"
+            "sha256": "86e6fe3da5934953f3aee6215507112d0c41571f656f374e759519f6ba1b3e7b"
         },
         "requires": {},
         "sources": [
@@ -32,6 +32,9 @@
         "colorama": {
             "version": "==0.3.9"
         },
+        "coverage": {
+            "version": "==4.4.1"
+        },
         "docopt": {
             "version": "==0.6.2"
         },
@@ -52,6 +55,15 @@
         },
         "pytest": {
             "version": "==3.1.2"
+        },
+        "pytest-cov": {
+            "version": "==2.5.1"
+        },
+        "pytest-mock": {
+            "version": "==1.6.0"
+        },
+        "pytest-mypy": {
+            "version": "==0.3.0"
         },
         "pytest-watch": {
             "version": "==4.1.0"
