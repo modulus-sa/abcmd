@@ -8,7 +8,7 @@ import os
 import pprint
 import types
 from pathlib import Path
-from typing import Any, Union, Mapping, Sequence, Callable, NewType
+from typing import Any, Union, Mapping, MutableMapping, Sequence, Callable, NewType, IO
 
 from abcmd import BaseCommand
 
@@ -34,6 +34,7 @@ DEFAULT_LOADERS = {
 
 class BaseConfig(abc.ABC):
     def __init__(self, *args: Mapping[str, Any], **kwargs: Any) -> None:
+        print("BASE CONFIG")
         if not hasattr(self, 'config'):
             if args and isinstance(args[0], collections.abc.Mapping):
                 self.config = args[0]
@@ -48,7 +49,7 @@ class Loader(BaseConfig):
     """Mixin to load configuration from a file."""
 
     @staticmethod
-    def _find_loaders(default: LoadersMappingType = None) -> Mapping[str, Callable]:
+    def _find_loaders(default: LoadersMappingType = None) -> Mapping[str, Callable[[IO], Mapping]]:
         if default is None:
             default = DEFAULT_LOADERS
         loaders = {}
@@ -65,6 +66,7 @@ class Loader(BaseConfig):
         return loaders
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        print("CALLING SUPER ON LOADER")
         if not args:
             msg = '{} takes at least on argument'.format(type(self))
             raise TypeError(msg)
@@ -100,7 +102,7 @@ class Loader(BaseConfig):
 class Checker(BaseConfig):
     """Mixin to validate configuration."""
 
-    def __new__(cls, *args: Any, **kwargs: Any) -> object:
+    def __new__(cls, *args: Any, **kwargs: Any) -> Any:
         valid = {
             name: attr
 
@@ -125,14 +127,15 @@ class Checker(BaseConfig):
         exception is raised. The types of the values in the configuration are
         checked against validation, if there is a type mismatch a ``TypeError``
         is raised."""
+        print("CALLIN SUPER ON CHECKER")
         super().__init__(*args, **kwargs)
-        if not hasattr(self, 'valid'):
-            self.valid = {}  # type: Mapping[str, Any]
+        # if not hasattr(self, 'valid'):
+        #     self.valid = {}  # type: MutableMapping[str, Any]
         self._validate()
 
     def _validate(self) -> None:
         """Fill config with default entries and validate values."""
-        config = self.config  # type: Mapping[str, Any]
+        config = self.config  # type: MutableMapping[str, Any]
         logging.debug('Checking config:\n%s', pprint.pformat(config))
         for opt, validator in self.valid.items():
             if opt in config:

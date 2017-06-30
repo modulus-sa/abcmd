@@ -97,7 +97,6 @@ def test_BaseCommand_init_arguments():
         def handle_error(self, err):
             pass
 
-
     with pytest.raises(TypeError) as err:
         Runner()
 

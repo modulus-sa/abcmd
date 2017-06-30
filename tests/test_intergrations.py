@@ -30,6 +30,7 @@ def test_init_calls_all_parents_init(config_file):
 
     class Config(Loader, Checker):
         opt0 = 'option 0'
+
         def __init__(self, *args, **kwargs):
             called.append(True)
             super().__init__(*args, **kwargs)
@@ -76,3 +77,21 @@ def test_Config_multi_inheritance_with_command_gets_right_valid_attr(config_file
     cmd = Cmd(config_file['task'], config_file['path'])
 
     assert  cmd.valid == {'option_first': 10, 'option_second': 20}
+
+
+def test_BaseCommand_with_only_Loader(config_file):
+    class Cmd(BaseCommand, Loader):
+        cmd = 'echo ok'
+
+        def run(self, *args, **kwargs):
+            pass
+
+        def dont_run(self, *args, **kwargs):
+            pass
+
+        def handle_error(self, *args, **kwargs):
+            pass
+
+    cmd = Cmd(config_file['task'], config_file['path'])
+
+    assert cmd.config == {'test_entry': 'ok'}

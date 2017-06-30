@@ -1,6 +1,6 @@
 """abcmd - ABCs & Mixins for wrapping commands with static configuration."""
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 __author__ = 'Konstantinos Tsakiltzidis <laerusk@gmail.com>'
 __all__ = ('BaseCommand',)
 
@@ -8,10 +8,10 @@ __all__ = ('BaseCommand',)
 import abc
 import shlex
 import subprocess as sp
-from collections.abc import Iterable
+import collections.abc
 from functools import lru_cache
 from string import Formatter
-from typing import Any, Union, Sequence, Mapping, Callable
+from typing import Any, Union, Sequence, Mapping, Callable, Dict
 import logging
 
 
@@ -54,26 +54,29 @@ class CommandFormatter(Formatter):
         # remove whitespace between args caused by empty optional parameters
         return ' '.join(self.format(template, **config).split())
 
-    def get_value(self, key: Union[str, int],
+    def get_value(self,
+                  key: Union[str, int],
                   args: Sequence[Any],
-                  kwargs: Mapping[str, Any]) -> str:
+                  kwargs: Mapping[str, Any]) -> Any:
         if not isinstance(key, str):
             return ''
-        prefix = ''
+        flag = ''
         if key.startswith('-'):
-            prefix, key, *_ = key.split()
+            flag, key, *_ = key.split()
 
         val = super().get_value(key, args, kwargs)
 
         if not val and val != 0:
             val = ''
         elif isinstance(val, (str, int)):
-            if prefix:
-                val = '{} {}'.format(prefix, val)
-        elif isinstance(val, Iterable):
-            if prefix:
-                val = ('{} {}'.format(prefix, v) for v in val)
+            if flag:
+                val = '{} {}'.format(flag, val)
+        elif isinstance(val, collections.abc.Iterable):
+            if flag:
+                val = ('{} {}'.format(flag, v) for v in val)
             val = ' '.join(map(str, val))
+        else:
+            val = str(val)
         return val
 
 
@@ -112,11 +115,11 @@ class BaseCommand(CommandABC):
     command = ''
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        self.config = None
         super().__init__(*args, **kwargs)
-        if self.config is None:
+        self._cache = {}  # type: Dict[str, Callable[[], str]]
+        # infinite recursing if check before assinging cache
+        if not hasattr(self, 'config'):
             raise TypeError('missing configuration.')
-        self._cache = {}  # type: dict
         self.formatter = CommandFormatter(self.config)
         self.dry_run = False
 
@@ -127,10 +130,10 @@ class BaseCommand(CommandABC):
             return
         self.run(*args, **kwargs)
 
-    def __getitem__(self, name: str) -> Union[str, int, bool, Sequence]:
+    def __getitem__(self, name: str) -> Any:
         return self.config[name]
 
-    def __getattr__(self, name: str) -> Callable:
+    def __getattr__(self, name: str) -> Callable[[], str]:
         cached = self._cache.get(name)
         if cached:
             return cached
@@ -158,15 +161,20 @@ class BaseCommand(CommandABC):
         proc = sp.Popen(command, stdout=sp.PIPE, stderr=sp.PIPE)
         out, error = proc.communicate()  # block
         if proc.returncode == 0:
-            return out.decode().strip()
+            try:
+                out = out.decode().strip()
+            except UnicodeDecodeError:
+                msg = ('Unicode error while decoding command output, '
+                       'replacing offending characters')
+                logging.warning(msg)
+                out = out.decode(errors='replace').strip()
+            return out
 
         error = error.decode().strip()
         if not self.handle_error(cmd, error):
             msg = '{}: {}'.format(cmd, error)
             logging.error('Unhandled error: ' + msg)
             raise sp.SubprocessError(msg)
-
-        return ''
 
     @abc.abstractmethod
     def run(self, *args: Any, **kwargs: Any) -> None:
