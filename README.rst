@@ -54,7 +54,7 @@ First we subclass ``Command`` and describe the procedure:
             # if the backup directory exists ignore the error and continue
             return cmd.startswith('mkdir') and error.endswith('File exists')
 
-Then we instatiate with a mapping that is used to render the templates,
+then we instatiate with a mapping that is used to render the templates,
 this will return a callable object that when called will run the procedure:
 
 .. code-block:: python
@@ -82,9 +82,18 @@ This would be equivalent with running the following commands:
 Using the ``config.Loader`` mixin make it possible to retrieve
 the static configuration from a file:
 
+Changing the ``Backup`` class above to inherit from ``config.Loader``:
+
+.. code-block:: python
+
+    class Backup(abcmd.Command, abcmd.config.Loader):
+        ...
+
+and creating a file with the configuration:
+
 .. code-block:: yaml
 
-    # dot-file-backup.yaml
+    # dotfiles-backup.yaml
 
     user: laerus
     directory: dotfiles
@@ -94,19 +103,18 @@ the static configuration from a file:
       - .inputrc
     server: 192.168.1.10
 
-changing the ``Backup`` class above to inherit from ``config.Loader``:
+We can then just run:
 
 .. code-block:: python
 
-    class Backup(Command, config.Loader):
-        ...
-
-we can then just run:
-
-.. code-block:: python
-
-    runner = Backup('dot-file-backup')
+    runner = Backup('dotfiles-backup')
     runner()
+
+assuming the file is in the current working directory.
+Notice how we didn't specify the extension of the file,
+that is because the ``Loader`` class automatically
+searches for known file extensions and uses the appropriate
+module, at the moment the supported formats are json, yaml and toml.
 
 
 
