@@ -24,22 +24,27 @@ to create shell command wrappers.
 Examples
 --------
 
-Automating backup of dotfiles:
+Automating backup of dotfiles
+
+First we subclass ``Command`` and describe the procedure:
 
 .. code-block:: python
 
     import datetime
+    import os
+
     import abcmd
 
     class Backup(abcmd.Command):
-        make = 'mkdir ~/{directory}'
-        copy = 'cp {files} ~/{directory}'
-        sync = 'rsync {directory} {user}@{server}:~/{directory} '
+        make = 'mkdir {directory}'
+        copy = 'cp {files} {directory}'
+        sync = 'rsync {directory} {user}@{server}:'
 
         def run(self, *args, **kwargs):
-            run_make()
-            run_copy()
-            run_sync()
+            os.chdir(os.environ['HOME'])
+            self.run_make()
+            self.run_copy()
+            self.run_sync()
 
         def dont_run(self, *args, **kwargs):
             # don't run between working hours
@@ -49,10 +54,15 @@ Automating backup of dotfiles:
             # if the backup directory exists ignore the error and continue
             return cmd.startswith('mkdir') and error.endswith('File exists')
 
+Then we instatiate with a mapping that is used to render the templates,
+this will return a callable object that when called will run the procedure:
+
+.. code-block:: python
+
     config = {
         'user': 'laerus',
         'directory': 'dotfiles',
-        'files': ['~/.vimrc', '~/.bashrc', '~/.inputrc'],
+        'files': ['.vimrc', '.bashrc', '.inputrc'],
         'server': '192.168.1.10'
     }
 
@@ -60,13 +70,44 @@ Automating backup of dotfiles:
     runner()
 
 
-This will run the following commands:
+This would be equivalent with running the following commands:
 
 .. code-block:: shell
 
     $ mkdir ~/dotfiles 
-    $ cp ~/.vimrc ~/.bashrc ~/.inputrc ~/dotifles
-    $ rsync dotfiles laerus@192.168.1.10:~/dotfiles
+    $ cp .vimrc .bashrc .inputrc dotfiles
+    $ rsync dotfiles laerus@192.168.1.10:
+
+
+Using the ``config.Loader`` mixin make it possible to retrieve
+the static configuration from a file:
+
+.. code-block:: yaml
+
+    # dot-file-backup.yaml
+
+    user: laerus
+    directory: dotfiles
+    files:
+      - .vimrc
+      - .bashrc
+      - .inputrc
+    server: 192.168.1.10
+
+changing the ``Backup`` class above to inherit from ``config.Loader``:
+
+.. code-block:: python
+
+    class Backup(Command, config.Loader):
+        ...
+
+we can then just run:
+
+.. code-block:: python
+
+    runner = Backup('dot-file-backup')
+    runner()
+
 
 
 Installation
