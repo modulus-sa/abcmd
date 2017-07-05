@@ -10,7 +10,7 @@ import types
 from pathlib import Path
 from typing import Any, Union, Mapping, MutableMapping, Sequence, Callable, NewType, IO
 
-from abcmd import BaseCommand
+from abcmd import Command
 
 
 LoadersMappingType = Mapping[str, Union[str, Sequence[str]]]
@@ -106,7 +106,7 @@ class Checker(BaseConfig):
 
             for base in reversed(cls.mro())
             if issubclass(base, BaseConfig)
-            and not issubclass(base, BaseCommand)
+            and not issubclass(base, Command)
 
             for name, attr in vars(base).items()
             if not name.startswith('_')

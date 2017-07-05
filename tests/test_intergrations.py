@@ -1,12 +1,12 @@
-from abcmd import BaseCommand
+from abcmd import Command
 from abcmd.config import Checker, Loader
 
 
-def test_Config_mixin_doesnt_pick_BaseCommand_subclass_attributes():
+def test_Config_mixin_doesnt_pick_Command_subclass_attributes():
     class Config(Checker):
         opt0 = 'option 0'
 
-    class Cmd(BaseCommand, Config):
+    class Cmd(Command, Config):
         cmd = 'cmd'
 
         def run(self, *args, **kwargs):
@@ -35,7 +35,7 @@ def test_init_calls_all_parents_init(config_file):
             called.append(True)
             super().__init__(*args, **kwargs)
 
-    class Cmd(BaseCommand, Config):
+    class Cmd(Command, Config):
         cmd = 'cmd'
 
         def run(self, *args, **kwargs):
@@ -62,7 +62,7 @@ def test_Config_multi_inheritance_with_command_gets_right_valid_attr(config_file
     class SecondConfig(FirstConfig):
         option_second = 20
 
-    class Cmd(BaseCommand, SecondConfig):
+    class Cmd(Command, SecondConfig):
         cmd = 'echo ok'
 
         def run(self, *args, **kwargs):
@@ -79,8 +79,8 @@ def test_Config_multi_inheritance_with_command_gets_right_valid_attr(config_file
     assert  cmd.valid == {'option_first': 10, 'option_second': 20}
 
 
-def test_BaseCommand_with_only_Loader(config_file):
-    class Cmd(BaseCommand, Loader):
+def test_Command_with_only_Loader(config_file):
+    class Cmd(Command, Loader):
         cmd = 'echo ok'
 
         def run(self, *args, **kwargs):

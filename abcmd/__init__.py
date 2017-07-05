@@ -2,7 +2,7 @@
 
 __version__ = '0.1.2'
 __author__ = 'Konstantinos Tsakiltzidis <laerusk@gmail.com>'
-__all__ = ('BaseCommand',)
+__all__ = ('Command',)
 
 
 import abc
@@ -90,7 +90,7 @@ class CommandABC(abc.ABC):
             super().__init__(*args, **kwargs)
 
 
-class BaseCommand(CommandABC):
+class Command(CommandABC):
     """Base class of all command runners.
 
     Subclassing this ABC provides the following features:
@@ -101,7 +101,7 @@ class BaseCommand(CommandABC):
 
               .. code:: python
 
-                  class MyCommand(BaseCommand):
+                  class MyCommand(Command):
                       greet = 'echo hello {name}'
 
                   mycmd = MyCommand({'name': 'world'})
@@ -162,13 +162,13 @@ class BaseCommand(CommandABC):
         out, error = proc.communicate()  # block
         if proc.returncode == 0:
             try:
-                out = out.decode().strip()
+                out = out.decode()
             except UnicodeDecodeError:
                 msg = ('Unicode error while decoding command output, '
                        'replacing offending characters')
                 logging.warning(msg)
-                out = out.decode(errors='replace').strip()
-            return out
+                out = out.decode(errors='replace')
+            return out.strip()
 
         error = error.decode().strip()
         if not self.handle_error(cmd, error):

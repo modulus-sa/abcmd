@@ -1,7 +1,7 @@
 import subprocess as sp
 
 import abcmd
-from abcmd import CommandFormatter, BaseCommand
+from abcmd import CommandFormatter, Command
 
 import pytest
 
@@ -82,12 +82,12 @@ def test_CommandFormatter_caches_commands():
     assert first_formatted is second_formatted
 
 
-def test_BaseCommand_abstract_methods():
-    assert BaseCommand.__abstractmethods__ == {'run', 'dont_run', 'handle_error'}
+def test_Command_abstract_methods():
+    assert Command.__abstractmethods__ == {'run', 'dont_run', 'handle_error'}
 
 
-def test_BaseCommand_init_arguments():
-    class Runner(BaseCommand):
+def test_Command_init_arguments():
+    class Runner(Command):
         def dont_run(self):
             return False
 
@@ -103,10 +103,10 @@ def test_BaseCommand_init_arguments():
     assert str(err).endswith("TypeError: missing configuration.")
 
 
-def test_BaseCommand_run():
+def test_Command_run():
     call_list = []
 
-    class Runner(BaseCommand):
+    class Runner(Command):
         def dont_run(self):
             return False
 
@@ -123,10 +123,10 @@ def test_BaseCommand_run():
     assert call_list == ['run']
 
 
-def test_BaseCommand_run_templates(mocker):
-    run_cmd_mock = mocker.patch('abcmd.BaseCommand._run_cmd')
+def test_Command_run_templates(mocker):
+    run_cmd_mock = mocker.patch('abcmd.Command._run_cmd')
 
-    class Runner(BaseCommand):
+    class Runner(Command):
         template = 'command template {-o OPT}'
 
         def dont_run(self):
@@ -145,8 +145,8 @@ def test_BaseCommand_run_templates(mocker):
     run_cmd_mock.assert_called_with('command template -o argument')
 
 
-def test_BaseCommand_getitem_from_config():
-    class Runner(BaseCommand):
+def test_Command_getitem_from_config():
+    class Runner(Command):
         def dont_run(self):
             return True
 
@@ -162,10 +162,10 @@ def test_BaseCommand_getitem_from_config():
     assert runner['attr0'] == 'attribute 0' and runner['attr1'] == 'attribute 1'
 
 
-def test_BaseCommand_dont_run_prevents_calling_run():
+def test_Command_dont_run_prevents_calling_run():
     call_list = []
 
-    class Runner(BaseCommand):
+    class Runner(Command):
         def dont_run(self):
             return True
 
@@ -181,10 +181,10 @@ def test_BaseCommand_dont_run_prevents_calling_run():
     assert call_list == []
 
 
-def test_BaseCommand_calls_handle_error_on_subprocess_error():
+def test_Command_calls_handle_error_on_subprocess_error():
     handle_list = []
 
-    class Runner(BaseCommand):
+    class Runner(Command):
         cat = 'cat NON_EXISTING_FILE'
 
         def dont_run(self):
@@ -205,10 +205,10 @@ def test_BaseCommand_calls_handle_error_on_subprocess_error():
                            'cat: NON_EXISTING_FILE: No such file or directory']
 
 
-def test_BaseCommand_stops_if_handle_error_returns_False():
+def test_Command_stops_if_handle_error_returns_False():
     handle_list = []
 
-    class Runner(BaseCommand):
+    class Runner(Command):
         echo = 'echo HEY'
         cat = 'cat NON_EXISTING_FILE'
 
@@ -233,8 +233,8 @@ def test_BaseCommand_stops_if_handle_error_returns_False():
     assert handle_list == ['echo']
 
 
-def test_BaseCommand_caches_templated_functions():
-    class Runner(BaseCommand):
+def test_Command_caches_templated_functions():
+    class Runner(Command):
         echo = 'echo HEY'
 
         def dont_run(self):
