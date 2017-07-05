@@ -166,7 +166,7 @@ running:
 
     runner = Backup(config)
 
-will result in a ``TypeError: 'user' must be of type 'int' not 'str'`` being raised.
+will result in a ``TypeError: 'user' must be of type 'str' not 'int'`` being raised.
 If a configuration entry is missing and there is not a provided default it will raise
 a ``config.MissingConfigurationEntry`` instead.
 

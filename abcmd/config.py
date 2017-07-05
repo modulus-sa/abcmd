@@ -141,7 +141,7 @@ class Checker(ConfigABC):
                     validator = type(validator)
                 if not isinstance(config[opt], validator):
                     current_type = type(config[opt])
-                    msg = '{} must be of type {!r} not {!r}'
+                    msg = '{!r} must be of type {!r} not {!r}'
                     msg = msg.format(opt, validator.__name__, current_type.__name__)
                     raise TypeError(msg)
             else:

@@ -132,7 +132,7 @@ def test_Checker_complains_on_wrong_types():
 
     with pytest.raises(TypeError) as err:
         TestChecker({'test_option': 'string'})
-    assert str(err).endswith("test_option must be of type 'int' not 'str'")
+    assert str(err).endswith("'test_option' must be of type 'int' not 'str'")
 
 
 def test_Checker_complains_on_wrong_types_with_default():
@@ -141,7 +141,7 @@ def test_Checker_complains_on_wrong_types_with_default():
 
     with pytest.raises(TypeError) as err:
         TestChecker({'test_option': 'string'})
-    assert str(err).endswith("test_option must be of type 'int' not 'str'")
+    assert str(err).endswith("'test_option' must be of type 'int' not 'str'")
 
 
 def test_Checker_okay():
