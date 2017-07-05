@@ -131,7 +131,6 @@ entries and their type at the class level:
     class Backup(abcmd.Command, BackupConfig):
         ...
 
-
 assining a configuration entry to an object than a type would make use of this value
 as the default value in case the entry is missing:
 
@@ -160,6 +159,16 @@ of ``Backup``, for example if the above configuration was:
         'files': ['.vimrc', '.bashrc', '.inputrc'],
         'server': '192.168.1.10'
     }
+
+running:
+
+.. code-block:: python
+
+    runner = Backup(config)
+
+will result in a ``TypeError: 'user' must be of type 'int' not 'str'`` being raised.
+If a configuration entry is missing and there is not a provided default it will raise
+a ``config.MissingConfigurationEntry`` instead.
 
 
 Installation
