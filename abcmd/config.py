@@ -34,7 +34,6 @@ DEFAULT_LOADERS = {
 
 class BaseConfig(abc.ABC):
     def __init__(self, *args: Mapping[str, Any], **kwargs: Any) -> None:
-        print("BASE CONFIG")
         if not hasattr(self, 'config'):
             if args and isinstance(args[0], collections.abc.Mapping):
                 self.config = args[0]
