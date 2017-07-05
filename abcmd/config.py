@@ -32,7 +32,7 @@ DEFAULT_LOADERS = {
 }  # type: LoadersMappingType
 
 
-class BaseConfig(abc.ABC):
+class ConfigABC(abc.ABC):
     def __init__(self, *args: Mapping[str, Any], **kwargs: Any) -> None:
         if not hasattr(self, 'config'):
             if args and isinstance(args[0], collections.abc.Mapping):
@@ -44,7 +44,7 @@ class BaseConfig(abc.ABC):
         return self.config[name]
 
 
-class Loader(BaseConfig):
+class Loader(ConfigABC):
     """Mixin to load configuration from a file."""
 
     @staticmethod
@@ -96,7 +96,7 @@ class Loader(BaseConfig):
             return loader(config_file)
 
 
-class Checker(BaseConfig):
+class Checker(ConfigABC):
     """Mixin to validate configuration."""
 
     def __new__(cls, *args: Any, **kwargs: Any) -> Any:
@@ -104,7 +104,7 @@ class Checker(BaseConfig):
             name: attr
 
             for base in reversed(cls.mro())
-            if issubclass(base, BaseConfig)
+            if issubclass(base, ConfigABC)
             and not issubclass(base, Command)
 
             for name, attr in vars(base).items()
@@ -124,9 +124,11 @@ class Checker(BaseConfig):
         exception is raised. The types of the values in the configuration are
         checked against validation, if there is a type mismatch a ``TypeError``
         is raised."""
+        print("CHECKER PRE SUPER INIT")
         super().__init__(*args, **kwargs)
         # if not hasattr(self, 'valid'):
         #     self.valid = {}  # type: MutableMapping[str, Any]
+        print("VALIDATING")
         self._validate()
 
     def _validate(self) -> None:

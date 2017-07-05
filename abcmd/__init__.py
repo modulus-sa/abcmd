@@ -86,8 +86,10 @@ class CommandABC(abc.ABC):
     def __init__(self, *args: dict, **kwargs: Any) -> None:
         if args and isinstance(args[0], dict):
             self.config = args[0]
-        else:
+        try:
             super().__init__(*args, **kwargs)
+        except TypeError:  # super is object
+            super().__init__()
 
 
 class Command(CommandABC):
@@ -115,6 +117,7 @@ class Command(CommandABC):
     command = ''
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        print("COMMAND CALLING SUPER")
         super().__init__(*args, **kwargs)
         self._cache = {}  # type: Dict[str, Callable[[], str]]
         # infinite recursing if check before assinging cache

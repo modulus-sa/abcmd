@@ -1,5 +1,7 @@
+import pytest
+
 from abcmd import Command
-from abcmd.config import Checker, Loader
+from abcmd.config import Checker, Loader, MissingConfigurationError
 
 
 def test_Config_mixin_doesnt_pick_Command_subclass_attributes():
@@ -95,3 +97,25 @@ def test_Command_with_only_Loader(config_file):
     cmd = Cmd(config_file['task'], config_file['path'])
 
     assert cmd.config == {'test_entry': 'ok'}
+
+
+def test_Command_with_only_Checker():
+    class Config(Checker):
+        opt_int = int
+        opt_int = str
+        opt_default = 'ok'
+
+    class Cmd(Command, Config):
+        cmd = 'echo ok'
+
+        def run(self, *args, **kwargs):
+            pass
+
+        def dont_run(self, *args, **kwargs):
+            pass
+
+        def handle_error(self, *args, **kwargs):
+            pass
+
+    with pytest.raises(MissingConfigurationError):
+        Cmd({})
