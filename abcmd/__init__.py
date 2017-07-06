@@ -117,7 +117,6 @@ class Command(CommandABC):
     command = ''
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        print("COMMAND CALLING SUPER")
         super().__init__(*args, **kwargs)
         self._cache = {}  # type: Dict[str, Callable[[], str]]
         # infinite recursing if check before assinging cache

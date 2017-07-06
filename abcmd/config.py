@@ -8,7 +8,7 @@ import os
 import pprint
 import types
 from pathlib import Path
-from typing import Any, Union, Mapping, MutableMapping, Sequence, Callable, NewType, IO
+from typing import Any, Union, Mapping, MutableMapping, Sequence, Callable, IO
 
 from abcmd import Command
 
@@ -124,11 +124,9 @@ class Checker(ConfigABC):
         exception is raised. The types of the values in the configuration are
         checked against validation, if there is a type mismatch a ``TypeError``
         is raised."""
-        print("CHECKER PRE SUPER INIT")
         super().__init__(*args, **kwargs)
         # if not hasattr(self, 'valid'):
         #     self.valid = {}  # type: MutableMapping[str, Any]
-        print("VALIDATING")
         self._validate()
 
     def _validate(self) -> None:
