@@ -16,6 +16,10 @@ def loader():
     return TestLoader
 
 
+def test_Loader_without_subclassing(config_file):
+    config = Loader(config_file['task'], config_file['path'])
+    assert config.config == {'test_entry': 'ok'}
+
 def test_Loader_complains_on_missing_all_init_arguments(loader):
     with pytest.raises(TypeError) as err:
         loader()

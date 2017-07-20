@@ -16,8 +16,8 @@ A library for wrapping shell commands with static configuration.
 Usage
 -----
 
-The library provides the ``abcmd.Command`` ABC and two mixins
-``abcmd.config.Checker`` and ``abcmd.config.Loader`` that can be used
+The library provides the ``abcmd.Command`` ABC and two helper classes for
+configuration ``abcmd.config.Checker`` and ``abcmd.config.Loader`` that can be used
 to create shell command wrappers.
 
 
@@ -80,17 +80,10 @@ This would be equivalent with running the following commands:
     $ rsync dotfiles laerus@192.168.1.10:
 
 
-Using the ``config.Loader`` mixin makes it possible to retrieve
+Using the ``config.Loader`` makes it possible to retrieve
 the static configuration from a file:
 
-Changing the ``Backup`` class above to inherit from ``config.Loader``
-
-.. code-block:: python
-
-    class Backup(abcmd.Command, abcmd.config.Loader):
-        ...
-
-and creating a file with the configuration:
+creating a file with the configuration:
 
 .. code-block:: yaml
 
@@ -104,11 +97,12 @@ and creating a file with the configuration:
       - .inputrc
     server: 192.168.1.10
 
-We can then just run:
+We can then run:
 
 .. code-block:: python
 
-    runner = Backup('dotfiles-backup')
+    config = Loader('dotfiles-backup')
+    runner = Backup(config)
     runner()
 
 assuming the file is in the current working directory.  Notice how we didn't specify
@@ -116,20 +110,18 @@ the extension of the file, that is because the ``Loader`` class automatically se
 for known file extensions and uses the appropriate module to load the configuration,
 at the moment the supported formats are ``json``, ``yaml`` and ``toml``.
 
-The ``config.Checker`` mixin provides a convenient way of checking the configuration
+The ``config.Checker`` provides a convenient way of checking the configuration
 at instantiation, we first create a subclass that describes the required configuration
 entries and their type at the class level:
 
 .. code-block:: python
 
-    class BackupConfig(abcmd.config.Checker):
+    class Checker(abcmd.config.Checker):
         user = str
         directory = 'dotfiles'
         files = list
         server = str
 
-    class Backup(abcmd.Command, BackupConfig):
-        ...
 
 assining a configuration entry to an object than a type would make use of this value
 as the default value in case the entry is missing:
@@ -142,8 +134,7 @@ as the default value in case the entry is missing:
         'server': '192.168.1.10'
     }
 
-    runner = Backup(config)
-    runner()
+    config = Checker(config)
 
 this will check each configuration entry against the types specified as
 the ``BackupConfig`` class attributes and will also add the missing
@@ -164,11 +155,25 @@ running:
 
 .. code-block:: python
 
-    runner = Backup(config)
+    config = Checker(config)
 
 will result in a ``TypeError: 'user' must be of type 'str' not 'int'`` being raised.
 If a configuration entry is missing and there is not a provided default it will raise
 a ``config.MissingConfigurationEntry`` instead.
+
+
+The configuration helper classes ``Loader`` and ``Checker`` can also be used as mixins
+to each other, so we can check and load the configuration at one go:
+
+.. code-block:: python
+
+    class Config(abcmd.config.Loader, abcmd.config.Checker):
+        user = str
+        directory = 'dotfiles'
+        files = list
+        server = str
+
+    config = Config({'user': 'ok', 'files': ['.bashrc'], 'server': '192.168.1.10'})
 
 
 Installation
