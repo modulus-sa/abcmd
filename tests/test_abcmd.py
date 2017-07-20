@@ -100,7 +100,7 @@ def test_Command_init_arguments():
     with pytest.raises(TypeError) as err:
         Runner()
 
-    assert str(err).endswith("TypeError: missing configuration.")
+    assert str(err).endswith("__init__() missing 1 required positional argument: 'config'")
 
 
 def test_Command_run():

@@ -80,19 +80,7 @@ class CommandFormatter(Formatter):
         return val
 
 
-class CommandABC(abc.ABC):
-    """ABC for command based classes"""
-
-    def __init__(self, *args: dict, **kwargs: Any) -> None:
-        if args and isinstance(args[0], dict):
-            self.config = args[0]
-        try:
-            super().__init__(*args, **kwargs)
-        except TypeError:  # super is object
-            super().__init__()
-
-
-class Command(CommandABC):
+class Command(abc.ABC):
     """Base class of all command runners.
 
     Subclassing this ABC provides the following features:
@@ -116,12 +104,9 @@ class Command(CommandABC):
 
     command = ''
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, config: Mapping) -> None:
+        self.config = config
         self._cache = {}  # type: Dict[str, Callable[[], str]]
-        # infinite recursing if check before assinging cache
-        if not hasattr(self, 'config'):
-            raise TypeError('missing configuration.')
         self.formatter = CommandFormatter(self.config)
         self.dry_run = False
 

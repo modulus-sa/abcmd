@@ -32,7 +32,7 @@ DEFAULT_LOADERS = {
 }  # type: LoadersMappingType
 
 
-class ConfigABC(abc.ABC):
+class ConfigBase:
     def __init__(self, *args: Mapping[str, Any], **kwargs: Any) -> None:
         if not hasattr(self, 'config'):
             if args and isinstance(args[0], collections.abc.Mapping):
@@ -44,7 +44,7 @@ class ConfigABC(abc.ABC):
         return self.config[name]
 
 
-class Loader(ConfigABC):
+class Loader(ConfigBase):
     """Mixin to load configuration from a file."""
 
     @staticmethod
@@ -64,6 +64,8 @@ class Loader(ConfigABC):
         return loaders
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        print("ARGS: ", args, "KWARGS:", kwargs)
+        print("NOT ARGS?:", not args)
         if not args:
             msg = '{} takes at least on argument'.format(type(self))
             raise TypeError(msg)
@@ -96,7 +98,7 @@ class Loader(ConfigABC):
             return loader(config_file)
 
 
-class Checker(ConfigABC):
+class Checker(ConfigBase):
     """Mixin to validate configuration."""
 
     def __new__(cls, *args: Any, **kwargs: Any) -> Any:
@@ -104,8 +106,7 @@ class Checker(ConfigABC):
             name: attr
 
             for base in reversed(cls.mro())
-            if issubclass(base, ConfigABC)
-            and not issubclass(base, Command)
+            if issubclass(base, ConfigBase)
 
             for name, attr in vars(base).items()
             if not name.startswith('_')
