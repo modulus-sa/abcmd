@@ -20,7 +20,6 @@ The library provides the ``abcmd.Command`` ABC and two helper classes for
 configuration ``abcmd.config.Checker`` and ``abcmd.config.Loader`` that can be used
 to create shell command wrappers.
 
-
 Examples
 --------
 
@@ -137,11 +136,11 @@ as the default value in case the entry is missing:
     config = Checker(config)
 
 this will check each configuration entry against the types specified as
-the ``BackupConfig`` class attributes and will also add the missing
+the ``Checker`` class attributes and will also add the missing
 ``directory`` entry with the value ``'dotfiles'``
 
 If there is a type mismatch a ``TypeError`` is raised at the instantiation
-of ``Backup``, for example if the above configuration was:
+of ``Checker``, for example if the above configuration was:
 
 .. code-block:: python
 
@@ -173,8 +172,7 @@ to each other, so we can check and load the configuration at one go:
         files = list
         server = str
 
-    config = Config({'user': 'ok', 'files': ['.bashrc'], 'server': '192.168.1.10'})
-
+    config = Config('dotfiles-backup')
 
 Installation
 ------------
