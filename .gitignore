@@ -34,3 +34,7 @@ pip-log.txt
 .cache
 tags
 .mypy_cache
+
+
+# vagga containers
+.vagga
