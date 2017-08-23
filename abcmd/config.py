@@ -47,6 +47,21 @@ class ConfigBase:
 class Loader(ConfigBase):
     """Mixin to load configuration from a file."""
 
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        if not args:
+            msg = '{} takes at least one argument.'
+            raise TypeError(msg.format(self.__class__.__name__))
+        if not isinstance(args[0], str):
+            msg = "first argument of {} must be of type 'str' not '{}'"
+            raise TypeError(msg.format(self.__class__.__name__, args[0].__class__.__name__))
+        self.task = args[0]
+        self.path = args[1] if len(args) > 1 else os.getcwd()
+        if not os.path.isdir(self.path):
+            raise FileNotFoundError('No such directory: {}'.format(self.path))
+        self.loaders = self._find_loaders()
+        self.config = self._load(self.task, self.path)
+        super().__init__(*args, **kwargs)
+
     @staticmethod
     def _find_loaders(default: LoadersMappingType = None) -> Mapping[str, Callable[[IO], Mapping]]:
         if default is None:
@@ -63,21 +78,7 @@ class Loader(ConfigBase):
                 loaders[ext] = getattr(module, 'load')
         return loaders
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        print("ARGS: ", args, "KWARGS:", kwargs)
-        print("NOT ARGS?:", not args)
-        if not args:
-            msg = '{} takes at least on argument'.format(type(self))
-            raise TypeError(msg)
-        self.task = args[0]
-        self.path = args[1] if len(args) > 1 else os.getcwd()
-        self.loaders = self._find_loaders()
-        self.config = self._load(self.task, self.path)
-        super().__init__(*args, **kwargs)
-
     def _load(self, task: str, path: str) -> Mapping[str, Any]:
-        if not os.path.isdir(path):
-            raise FileNotFoundError('No such directory: {}'.format(path))
 
         pathobj = Path(path)
         logging.debug("Searching config files in '{!s}'.".format(pathobj))

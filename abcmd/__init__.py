@@ -152,7 +152,7 @@ class Command(abc.ABC):
                 out = out.decode()
             except UnicodeDecodeError:
                 msg = ('Unicode error while decoding command output, '
-                       'replacing offending characters')
+                       'replacing offending characters.')
                 logging.warning(msg)
                 out = out.decode(errors='replace')
             return out.strip()

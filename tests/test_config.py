@@ -20,10 +20,11 @@ def test_Loader_without_subclassing(config_file):
     config = Loader(config_file['task'], config_file['path'])
     assert config.config == {'test_entry': 'ok'}
 
+
 def test_Loader_complains_on_missing_all_init_arguments(loader):
     with pytest.raises(TypeError) as err:
         loader()
-    assert str(err).endswith('takes at least on argument')
+    assert str(err).endswith('takes at least one argument.')
 
 
 def test_Loader_defaults_to_cwd_on_init_with_one_argument(loader):
@@ -237,3 +238,11 @@ def test_mixin_Checker_Loader_fills_default_values(config_file):
     config = Config(config_file['task'], config_file['path'])
 
     assert config['option'] == 'a' and config['test_entry'] == 'ok'
+
+
+def test_Loader_with_invalid_arguments(loader):
+    with pytest.raises(TypeError) as err:
+        loader({})
+
+    assert ("first argument of {} must be of type 'str' not 'dict'"
+            "".format(loader.__name__)) in str(err)
