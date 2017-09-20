@@ -40,13 +40,18 @@ class CommandFormatter(Formatter):
         config: dict
             the configuration that the formatting is based on
         """
-        self.config = config
+        self._config = config
+
+    @property
+    def config(self):
+        self.__call__.cache_clear() 
+        return self._config
 
     @lru_cache()
     def __call__(self, template: str) -> str:
-        # don't polute self.config
+        # don't polute self._config
         config = {}
-        for key, val in self.config.items():
+        for key, val in self._config.items():
             if isinstance(val, bool):
                 config[key] = '--' + key.lower().replace('_', '-') if val else ''
             else:
@@ -104,10 +109,11 @@ class Command(abc.ABC):
 
     command = ''
 
-    def __init__(self, config: Mapping) -> None:
-        self.config = config
+    def __init__(self, config: Mapping, *, runner: Callable = None) -> None:
+        self._config = config
+        self._runner = runner if runner is not None else _run_cmd
         self._cache = {}  # type: Dict[str, Callable[[], str]]
-        self.formatter = CommandFormatter(self.config)
+        self.formatter = CommandFormatter(self._config)
         self.dry_run = False
 
     def __call__(self, *args: Any, dry_run: bool = False, **kwargs: Any) -> None:
@@ -118,50 +124,31 @@ class Command(abc.ABC):
         self.run(*args, **kwargs)
 
     def __getitem__(self, name: str) -> Any:
-        return self.config[name]
+        return self._config[name]
 
     def __getattr__(self, name: str) -> Callable[[], str]:
         cached = self._cache.get(name)
         if cached:
             return cached
         if not name.startswith('run_'):
-            raise AttributeError('{} has no attribute {}'.format(type(self), name))
+            raise AttributeError('{} has no attribute {} '.format(type(self), name))
 
         _, template = name.split('_', maxsplit=1)
 
         def templated() -> str:
             """Format and run a command template."""
             command = self.formatter(getattr(self, template))
-            return self._run_cmd(command)
+            return self._runner(self, command)
 
         # inspection/debugging
         templated.__name__ = name
         self._cache[name] = templated
         return templated
 
-    def _run_cmd(self, cmd: str) -> str:
-        command = shlex.split(cmd)
-        logging.debug("Running '%s':", cmd)
-        if self.dry_run:
-            return ''
-
-        proc = sp.Popen(command, stdout=sp.PIPE, stderr=sp.PIPE)
-        out, error = proc.communicate()  # block
-        if proc.returncode == 0:
-            try:
-                out = out.decode()
-            except UnicodeDecodeError:
-                msg = ('Unicode error while decoding command output, '
-                       'replacing offending characters.')
-                logging.warning(msg)
-                out = out.decode(errors='replace')
-            return out.strip()
-
-        error = error.decode().strip()
-        if not self.handle_error(cmd, error):
-            msg = '{}: {}'.format(cmd, error)
-            logging.error('Unhandled error: ' + msg)
-            raise sp.SubprocessError(msg)
+    @property
+    def config(self):
+        self._cache.clear()
+        return self.formatter.config
 
     @abc.abstractmethod
     def run(self, *args: Any, **kwargs: Any) -> None:
@@ -177,3 +164,28 @@ class Command(abc.ABC):
         """Called on any error from commands. Return True
         to continue running or False to abort.
         """
+
+
+def _run_cmd(cls, cmd: str) -> str:
+    command = shlex.split(cmd)
+    logging.debug("Running '%s':", cmd)
+    if cls.dry_run:
+        return ''
+
+    proc = sp.Popen(command, stdout=sp.PIPE, stderr=sp.PIPE)
+    out, error = proc.communicate()  # block
+    if proc.returncode == 0:
+        try:
+            out = out.decode()
+        except UnicodeDecodeError:
+            msg = ('Unicode error while decoding command output, '
+                   'replacing offending characters.')
+            logging.warning(msg)
+            out = out.decode(errors='replace')
+        return out.strip()
+
+    error = error.decode().strip()
+    if not cls.handle_error(cmd, error):
+        msg = '{}: {}'.format(cmd, error)
+        logging.error('Unhandled error: ' + msg)
+        raise sp.SubprocessError(msg)

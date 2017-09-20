@@ -82,6 +82,14 @@ def test_CommandFormatter_caches_commands():
     assert first_formatted is second_formatted
 
 
+def test_CommandFormatter_on_config_change():
+    formatter = CommandFormatter({'OPTION': 'option'})
+    assert formatter('command {OPTION}') == 'command option'
+
+    formatter.config['OPTION'] = 'changed'
+    assert formatter('command {OPTION}') == 'command changed'
+
+
 def test_Command_abstract_methods():
     assert Command.__abstractmethods__ == {'run', 'dont_run', 'handle_error'}
 
@@ -124,7 +132,7 @@ def test_Command_run():
 
 
 def test_Command_run_templates(mocker):
-    run_cmd_mock = mocker.patch('abcmd.Command._run_cmd')
+    run_cmd_mock = mocker.Mock()
 
     class Runner(Command):
         template = 'command template {-o OPT}'
@@ -138,11 +146,11 @@ def test_Command_run_templates(mocker):
         def handle_error(self, err):
             pass
 
-    runner = Runner({'OPT': 'argument'})
+    runner = Runner({'OPT': 'argument'}, runner=run_cmd_mock)
     runner()
 
     assert runner.run_template.__name__ == 'run_template'
-    run_cmd_mock.assert_called_with('command template -o argument')
+    run_cmd_mock.assert_called_with(runner, 'command template -o argument')
 
 
 def test_Command_getitem_from_config():
@@ -252,3 +260,30 @@ def test_Command_caches_templated_functions():
     second_function = runner.run_echo
 
     assert first_function is second_function
+
+
+def test_Command_on_config_change():
+    command_stream = []
+
+    def run(runner, cmd):
+        command_stream.append(cmd)
+
+    class Runner(Command):
+        cmd = 'command {OPTION}'
+
+        def dont_run(self):
+            return False
+
+        def run(self):
+            self.run_cmd()
+
+        def handle_error(self, *args):
+            pass
+
+    runner = Runner({'OPTION': 'option'}, runner=run)
+    runner()
+    assert command_stream[-1] == 'command option'
+
+    runner.config['OPTION'] = 'changed'
+    runner()
+    assert command_stream[-1] == 'command changed'
