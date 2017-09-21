@@ -94,9 +94,12 @@ class Loader(ConfigBase):
             raise FileNotFoundError(msg.format(task)) from None
         # first character in suffix is the dot '.'
         file_extension = fname.suffix[1:]
+        logging.debug('Looking for loader for file {!s} '
+                      'with extension {!r}'.format(fname, file_extension))
+        logging.debug('Loaders: {}'.format(self.loaders))
         loader = self.loaders.get(file_extension)
         if loader is None:
-            raise UnknownFormatError('Could not load configuration file {!r}, '
+            raise UnknownFormatError('Could not load configuration file {!s}, '
                                      'unknown format {!r}'.format(fname, file_extension))
         with fname.open('r') as config_file:
             logging.debug('Loading configuration file %s with %s ', pathobj, file_extension)
