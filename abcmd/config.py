@@ -1,16 +1,20 @@
 """Mixins for building configurations for commands."""
 
 import abc
-import collections
 import importlib
 import logging
 import os
 import pprint
+import sys
 import types
 from pathlib import Path
-from typing import Any, Union, Mapping, MutableMapping, Sequence, Callable, IO
 
-from abcmd import Command
+if sys.version_info.minor < 5:
+    import collections as cabc
+    from typingstub import Any, Union, Sequence, Mapping, Callable, Dict
+else:
+    import collections.abc as cabc
+    from typing import Any, Union, Sequence, Mapping, Callable, Dict
 
 
 LoadersMappingType = Mapping[str, Union[str, Sequence[str]]]
@@ -35,7 +39,7 @@ DEFAULT_LOADERS = {
 class ConfigBase:
     def __init__(self, *args: Mapping[str, Any], **kwargs: Any) -> None:
         if not hasattr(self, 'config'):
-            if args and isinstance(args[0], collections.abc.Mapping):
+            if args and isinstance(args[0], cabc.Mapping):
                 self.config = args[0]
             else:
                 self.config = {}
