@@ -1,16 +1,20 @@
 """Mixins for building configurations for commands."""
 
 import abc
-import collections
 import importlib
 import logging
 import os
 import pprint
+import sys
 import types
 from pathlib import Path
-from typing import Any, Union, Mapping, MutableMapping, Sequence, Callable, IO
 
-from abcmd import Command
+if sys.version_info.minor < 5:
+    import collections as cabc
+    from .typingstub import Any, Union, Sequence, Mapping, Callable, Dict, IO
+else:
+    import collections.abc as cabc
+    from typing import Any, Union, Sequence, Mapping, Callable, Dict
 
 
 LoadersMappingType = Mapping[str, Union[str, Sequence[str]]]
@@ -35,7 +39,7 @@ DEFAULT_LOADERS = {
 class ConfigBase:
     def __init__(self, *args: Mapping[str, Any], **kwargs: Any) -> None:
         if not hasattr(self, 'config'):
-            if args and isinstance(args[0], collections.abc.Mapping):
+            if args and isinstance(args[0], cabc.Mapping):
                 self.config = args[0]
             else:
                 self.config = {}
@@ -92,8 +96,8 @@ class Loader(ConfigBase):
         file_extension = fname.suffix[1:]
         loader = self.loaders.get(file_extension)
         if loader is None:
-            raise UnknownFormatError('Could not load configuration file {}, '
-                                     'unknown format'.format(fname))
+            raise UnknownFormatError('Could not load configuration file {!r}, '
+                                     'unknown format {!r}'.format(fname, file_extension))
         with fname.open('r') as config_file:
             logging.debug('Loading configuration file %s with %s ', pathobj, file_extension)
             return loader(config_file)

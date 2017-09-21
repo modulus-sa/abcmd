@@ -8,11 +8,17 @@ __all__ = ('Command',)
 import abc
 import shlex
 import subprocess as sp
-import collections.abc
+import sys
 from functools import lru_cache
 from string import Formatter
-from typing import Any, Union, Sequence, Mapping, Callable, Dict
 import logging
+
+if sys.version_info.minor < 5:
+    import collections as cabc
+    from .typingstub import Any, Union, Sequence, Mapping, Callable, Dict
+else:
+    import collections.abc as cabc
+    from typing import Any, Union, Sequence, Mapping, Callable, Dict
 
 
 class CommandFormatter(Formatter):
@@ -76,7 +82,7 @@ class CommandFormatter(Formatter):
         elif isinstance(val, (str, int)):
             if flag:
                 val = '{} {}'.format(flag, val)
-        elif isinstance(val, collections.abc.Iterable):
+        elif isinstance(val, cabc.Iterable):
             if flag:
                 val = ('{} {}'.format(flag, v) for v in val)
             val = ' '.join(map(str, val))
