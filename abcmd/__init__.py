@@ -145,7 +145,7 @@ class Command(ABC):
         if not name.startswith('run_'):
             raise AttributeError('{} has no attribute {} '.format(type(self), name))
 
-        _, template = name.split('_', maxsplit=1)
+        _, template = name.split('_', 1)
 
         def templated() -> str:
             """Format and run a command template."""
