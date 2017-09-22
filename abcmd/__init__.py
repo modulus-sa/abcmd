@@ -20,6 +20,12 @@ else:
     import collections.abc as cabc
     from typing import Any, Union, Sequence, Mapping, Callable, Dict
 
+if sys.version_info.minor < 4:
+    class ABC:
+        """Stub ABC for python < 3.4"""
+else:
+    from abc import ABC
+
 
 class CommandFormatter(Formatter):
     """Format strings based on command patterns and configuration entries.
@@ -91,7 +97,7 @@ class CommandFormatter(Formatter):
         return val
 
 
-class Command(abc.ABC):
+class Command(ABC):
     """Base class of all command runners.
 
     Subclassing this ABC provides the following features:
