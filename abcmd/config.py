@@ -11,11 +11,10 @@ from pathlib import Path
 
 if sys.version_info.minor < 5:
     import collections as cabc
-    from .typingstub import Any, Union, Sequence, Mapping, Callable, Dict, IO
+    from .typingstub import Any, Union, Sequence, Mapping, Callable, IO
 else:
     import collections.abc as cabc
-    from typing import Any, Union, Sequence, Mapping, Callable, Dict, IO
-
+    from typing import Any, Union, Sequence, Mapping, Callable, IO
 
 LoadersMappingType = Mapping[str, Union[str, Sequence[str]]]
 
