@@ -36,7 +36,7 @@ DEFAULT_LOADERS = {
 
 class ConfigBase:
     def __init__(self, *args: Mapping[str, Any], **kwargs: Any) -> None:
-        if not hasattr(self, 'config'):
+        if not self.__dict__.get('config'):
             if args and isinstance(args[0], cabc.Mapping):
                 self.config = args[0]
             else:
@@ -44,6 +44,9 @@ class ConfigBase:
 
     def __getitem__(self, name: str) -> Any:
         return self.config[name]
+
+    def __getattr__(self, attr):
+        return getattr(self.config, attr)
 
 
 class Loader(ConfigBase):

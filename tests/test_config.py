@@ -3,7 +3,7 @@ import tempfile
 from unittest.mock import Mock
 
 from abcmd import config
-from abcmd.config import (Loader, Checker, MissingConfigurationError, UnknownFormatError)
+from abcmd.config import (ConfigBase, Loader, Checker, MissingConfigurationError, UnknownFormatError)
 
 import pytest
 
@@ -246,3 +246,15 @@ def test_Loader_with_invalid_arguments(loader):
 
     assert ("first argument of {} must be of type 'str' not 'dict'"
             "".format(loader.__name__)) in str(err)
+
+
+def test_ConfigBase_support_for_mapping_methods():
+
+    class Config(ConfigBase):
+        pass
+
+    config = Config({'option': 'test_entry'})
+
+    assert list(config.items()) == [('option', 'test_entry')]
+    assert list(config.values()) == ['test_entry']
+    assert list(config.keys()) == ['option']
