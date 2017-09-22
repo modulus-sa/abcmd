@@ -1,12 +1,12 @@
 """Mixins for building configurations for commands."""
 
+import glob
 import importlib
 import logging
 import os
 import pprint
 import sys
 import types
-from pathlib import Path
 
 if sys.version_info.minor < 5:
     import collections as cabc
@@ -82,16 +82,15 @@ class Loader(ConfigBase):
 
     def _load(self, task: str, path: str) -> Mapping[str, Any]:
 
-        pathobj = Path(path)
-        logging.debug("Searching config files in '{!s}'.".format(pathobj))
-        config_files = iter(pathobj.glob(task + '.*'))
+        logging.debug("Searching config files in '{!s}'.".format(path))
+        config_files = iter(glob.glob(os.path.join(path, task + '.*')))
         try:
             fname = next(config_files)
         except StopIteration:
             msg = 'Could not find configuration file for task {!r}'
             raise FileNotFoundError(msg.format(task)) from None
         # first character in suffix is the dot '.'
-        file_extension = fname.suffix[1:]
+        file_extension = os.path.splitext(fname)[1][1:]
         logging.debug('Looking for loader for file {!s} '
                       'with extension {!r}'.format(fname, file_extension))
         logging.debug('Loaders: {}'.format(self.loaders))
@@ -99,8 +98,8 @@ class Loader(ConfigBase):
         if loader is None:
             raise UnknownFormatError('Could not load configuration file {!s}, '
                                      'unknown format {!r}'.format(fname, file_extension))
-        with fname.open('r') as config_file:
-            logging.debug('Loading configuration file %s with %s ', pathobj, file_extension)
+        with open(fname, 'r') as config_file:
+            logging.debug('Loading configuration file %s with %s ', fname, file_extension)
             return loader(config_file)
 
 
