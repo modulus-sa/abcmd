@@ -14,7 +14,7 @@ if sys.version_info.minor < 5:
     from .typingstub import Any, Union, Sequence, Mapping, Callable, Dict, IO
 else:
     import collections.abc as cabc
-    from typing import Any, Union, Sequence, Mapping, Callable, Dict
+    from typing import Any, Union, Sequence, Mapping, Callable, Dict, IO
 
 
 LoadersMappingType = Mapping[str, Union[str, Sequence[str]]]
