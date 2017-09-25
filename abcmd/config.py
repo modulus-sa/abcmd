@@ -15,6 +15,12 @@ else:
     import collections.abc as cabc
     from typing import Any, Union, Sequence, Mapping, Callable, IO
 
+if sys.version_info.minor < 3:
+    class FileNotFoundError(IOError):
+        """For backwards compatibility with python<3.2,
+        for more info look at python docs."""
+
+
 LoadersMappingType = Mapping[str, Union[str, Sequence[str]]]
 
 
@@ -91,7 +97,7 @@ class Loader(ConfigBase):
             fname = next(config_files)
         except StopIteration:
             msg = 'Could not find configuration file for task {!r}'
-            raise FileNotFoundError(msg.format(task)) from None
+            raise FileNotFoundError(msg.format(task))
         # first character in suffix is the dot '.'
         file_extension = os.path.splitext(fname)[1][1:]
         logging.debug('Looking for loader for file {!s} '
