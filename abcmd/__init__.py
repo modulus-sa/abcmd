@@ -186,20 +186,18 @@ def _run_cmd(cls, cmd: str) -> str:
 
     proc = sp.Popen(command, stdout=sp.PIPE, stderr=sp.PIPE)
     out, error = proc.communicate()  # block
-    if proc.returncode == 0:
-        try:
-            out = out.decode()
-            error = error.decode()
-        except UnicodeDecodeError:
-            msg = ('Unicode error while decoding command output, '
-                   'replacing offending characters.')
-            logging.warning(msg)
-            out = out.decode(errors='replace')
-            error = error.decode(errors='replace')
-        return out.strip(), error.strip()
+    try:
+        out = out.decode()
+        error = error.decode()
+    except UnicodeDecodeError:
+        msg = ('Unicode error while decoding command output, '
+               'replacing offending characters.')
+        logging.warning(msg)
+        out = out.decode(errors='replace')
+        error = error.decode(errors='replace')
 
-    error = error.decode().strip()
-    if not cls.handle_error(cmd, error):
+    if proc.returncode != 0 and not cls.handle_error(cmd, error):
         msg = '{}: {}'.format(cmd, error)
         logging.error('Unhandled error: ' + msg)
         raise sp.SubprocessError(msg)
+    return out.strip(), error.strip()
