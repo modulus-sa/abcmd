@@ -189,12 +189,14 @@ def _run_cmd(cls, cmd: str) -> str:
     if proc.returncode == 0:
         try:
             out = out.decode()
+            error = error.decode()
         except UnicodeDecodeError:
             msg = ('Unicode error while decoding command output, '
                    'replacing offending characters.')
             logging.warning(msg)
             out = out.decode(errors='replace')
-        return out.strip()
+            error = error.decode(errors='replace')
+        return out.strip(), error.strip()
 
     error = error.decode().strip()
     if not cls.handle_error(cmd, error):
