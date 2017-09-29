@@ -35,7 +35,8 @@ class UnknownFormatError(Exception):
 # module name - file extensions
 DEFAULT_LOADERS = {
     'toml': 'toml',
-    'yaml': ('yaml', 'yml'),
+    'yaml': 'yaml',
+    'yml': 'yaml',
     'json': 'json',
 }  # type: LoadersMappingType
 
@@ -69,25 +70,22 @@ class Loader(ConfigBase):
         self.path = args[1] if len(args) > 1 else os.getcwd()
         if not os.path.isdir(self.path):
             raise FileNotFoundError('No such directory: {}'.format(self.path))
-        self.loaders = self._find_loaders()
         self.config = self._load(self.task, self.path)
         super().__init__(*args, **kwargs)
 
     @staticmethod
-    def _find_loaders(default: LoadersMappingType = None) -> Mapping[str, Callable[[IO], Mapping]]:
+    def _find_loader(extension, default: LoadersMappingType = None) -> Callable[[str], dict]:
         if default is None:
             default = DEFAULT_LOADERS
-        loaders = {}
-        for module_name, extensions in default.items():
+        try:
+            module = importlib.import_module(default[extension])
+        except (ImportError, KeyError):
+            return None
+        else:
             try:
-                module = importlib.import_module(module_name)
-            except ImportError:
-                continue
-            if isinstance(extensions, str):
-                extensions = [extensions]
-            for ext in extensions:
-                loaders[ext] = getattr(module, 'load')
-        return loaders
+                return getattr(module, 'load')
+            except AttributeError:
+                return None
 
     def _load(self, task: str, path: str) -> Mapping[str, Any]:
 
@@ -102,13 +100,15 @@ class Loader(ConfigBase):
         file_extension = os.path.splitext(fname)[1][1:]
         logging.debug('Looking for loader for file {!s} '
                       'with extension {!r}'.format(fname, file_extension))
-        logging.debug('Loaders: {}'.format(self.loaders))
-        loader = self.loaders.get(file_extension)
+        loader = self._find_loader(file_extension)
         if loader is None:
-            raise UnknownFormatError('Could not load configuration file {!s}, '
-                                     'unknown format {!r}'.format(fname, file_extension))
+            msg = ('Could not load configuration file {!s}, '
+                   'unknown format {!r}'.format(fname, file_extension))
+            logging.error(msg)
+            raise UnknownFormatError(msg)
+        logging.debug('Found loader: {}'.format(loader))
         with open(fname, 'r') as config_file:
-            logging.debug('Loading configuration file %s with %s ', fname, file_extension)
+            logging.debug('Loading configuration file {}'.format(fname))
             return loader(config_file)
 
 

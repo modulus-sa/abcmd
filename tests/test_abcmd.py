@@ -210,7 +210,7 @@ def test_Command_calls_handle_error_on_subprocess_error():
     runner()
 
     assert handle_list == ['cat NON_EXISTING_FILE',
-                           'cat: NON_EXISTING_FILE: No such file or directory']
+                           'cat: NON_EXISTING_FILE: No such file or directory\n']
 
 
 def test_Command_stops_if_handle_error_returns_False():

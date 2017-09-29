@@ -59,8 +59,8 @@ def test_Loader_raises_error_on_unknown_file_format(loader):
 
 def test_Loader_uses_correct_loader_with_correct_file(loader, config_file, mocker):
     loader_mock = Mock(return_value=config_file['loader'])
-    find_loaders_mock = mocker.patch.object(loader, '_find_loaders')
-    find_loaders_mock.return_value = {config_file['loader']: loader_mock}
+    find_loaders_mock = mocker.patch.object(loader, '_find_loader')
+    find_loaders_mock.return_value = loader_mock
 
     loader_obj = loader(config_file['task'], config_file['path'])
 
@@ -79,9 +79,9 @@ def test_Loader_staticmethod_find_loaders(config_file, mocker):
     import_module_mock = mocker.patch('abcmd.config.importlib.import_module')
     import_module_mock.return_value = module_mock
 
-    loaders = Loader._find_loaders()
+    loader = Loader._find_loader(config_file['loader'])
 
-    assert loaders[config_file['loader']] == module_mock.load
+    assert loader == module_mock.load
 
 def test_Checker_with_type_and_object_validation():
     class TestChecker(Checker):
