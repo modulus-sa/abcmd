@@ -49,8 +49,11 @@ class ConfigBase:
             else:
                 self.config = {}
 
-    def __getitem__(self, name: str) -> Any:
-        return self.config[name]
+    def __getitem__(self, key: str) -> Any:
+        return self.config[key]
+
+    def __setitem__(self, key, value):
+        self.config[key] = value
 
     def __getattr__(self, attr):
         return getattr(self.config, attr)

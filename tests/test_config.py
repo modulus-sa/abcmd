@@ -258,3 +258,21 @@ def test_ConfigBase_support_for_mapping_methods():
     assert list(config.items()) == [('option', 'test_entry')]
     assert list(config.values()) == ['test_entry']
     assert list(config.keys()) == ['option']
+
+
+def test_Config_setattr_and_getattr():
+    class Config(ConfigBase):
+        pass
+
+    config = Config({'option': 'test_entry'})
+
+    # getitem
+    assert config['option'] == 'test_entry'
+
+    # setitem new
+    config['other'] = 'other_entry'
+    assert config['other'] == 'other_entry'
+
+    # setitem overwrite
+    config['option'] = 'changed_entry'
+    assert config['option'] == 'changed_entry'
