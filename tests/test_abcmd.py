@@ -262,7 +262,7 @@ def test_Command_caches_templated_functions():
     assert first_function is second_function
 
 
-def test_Command_on_config_change():
+def test_Command_on_config_change_clears_caches():
     command_stream = []
 
     def run(runner, cmd):
@@ -287,3 +287,30 @@ def test_Command_on_config_change():
     runner.config['OPTION'] = 'changed'
     runner()
     assert command_stream[-1] == 'command changed'
+
+
+def test_Command_runs_run_before_and_run_after_if_they_are_defined():
+    command_stream = []
+
+    class Runner(Command):
+        cmd = 'command {OPTION}'
+
+        def before_run(self):
+            command_stream.append('before')
+
+        def after_run(self):
+            command_stream.append('after')
+
+        def dont_run(self):
+            return False
+
+        def run(self):
+            pass
+
+        def handle_error(self, *args):
+            pass
+
+    runner = Runner({})
+    runner()
+
+    assert command_stream == ['before', 'after']

@@ -133,7 +133,13 @@ class Command(ABC):
         self.dry_run = dry_run
         if self.dont_run():
             return
+        if hasattr(self, 'before_run'):
+            self.before_run()
+
         self.run(*args, **kwargs)
+
+        if hasattr(self, 'after_run'):
+            self.after_run()
 
     def __getitem__(self, name: str) -> Any:
         return self._config[name]
