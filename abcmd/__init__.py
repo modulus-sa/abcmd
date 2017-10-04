@@ -206,4 +206,4 @@ def _run_cmd(cls, cmd: str) -> str:
         msg = '{}: {}'.format(cmd, error)
         logging.error('Unhandled error: ' + msg)
         raise sp.SubprocessError(msg)
-    return out.strip(), error.strip()
+    return out + error
