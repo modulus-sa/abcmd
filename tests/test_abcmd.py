@@ -131,6 +131,25 @@ def test_Command_run():
     assert call_list == ['run']
 
 
+def test_Command_stores_templates_on_creation():
+    class Runner(Command):
+        template0 = 'command one'
+        template1 = 'command two'
+
+        def run(self):
+            pass
+
+        def handle_error(self):
+            pass
+
+        def dont_run(self):
+            pass
+
+    runner = Runner({})
+
+    assert runner._templates == {'template0': 'command one',
+                                 'template1': 'command two'}
+
 def test_Command_run_templates(mocker):
     run_cmd_mock = mocker.Mock()
 
@@ -141,7 +160,7 @@ def test_Command_run_templates(mocker):
             return False
 
         def run(self, *args, **kwargs):
-            self.run_template()
+            self.template()
 
         def handle_error(self, err):
             pass
@@ -149,25 +168,8 @@ def test_Command_run_templates(mocker):
     runner = Runner({'OPT': 'argument'}, runner=run_cmd_mock)
     runner()
 
-    assert runner.run_template.__name__ == 'run_template'
+    assert runner.template.__name__ == 'template'
     run_cmd_mock.assert_called_with(runner, 'command template -o argument')
-
-
-def test_Command_getitem_from_config():
-    class Runner(Command):
-        def dont_run(self):
-            return True
-
-        def run(self):
-            pass
-
-        def handle_error(self, err):
-            pass
-
-    runner = Runner({'attr0': 'attribute 0', 'attr1': 'attribute 1'})
-    runner()
-
-    assert runner['attr0'] == 'attribute 0' and runner['attr1'] == 'attribute 1'
 
 
 def test_Command_dont_run_prevents_calling_run():
@@ -199,7 +201,7 @@ def test_Command_calls_handle_error_on_subprocess_error():
             return False
 
         def run(self, *args, **kwargs):
-            self.run_cat()
+            self.cat()
 
         def handle_error(self, cmd, error):
             handle_list.append(cmd)
@@ -224,11 +226,11 @@ def test_Command_stops_if_handle_error_returns_False():
             return False
 
         def run(self, *args, **kwargs):
-            self.run_echo()
+            self.echo()
             handle_list.append('echo')
-            self.run_cat()
+            self.cat()
             handle_list.append('cat')
-            self.run_echo()
+            self.echo()
             handle_list.append('echo')
 
         def handle_error(self, cmd, error):
@@ -256,8 +258,8 @@ def test_Command_caches_templated_functions():
 
     runner = Runner({})
 
-    first_function = runner.run_echo
-    second_function = runner.run_echo
+    first_function = runner.echo
+    second_function = runner.echo
 
     assert first_function is second_function
 
@@ -275,7 +277,7 @@ def test_Command_on_config_change_clears_caches():
             return False
 
         def run(self):
-            self.run_cmd()
+            self.cmd()
 
         def handle_error(self, *args):
             pass

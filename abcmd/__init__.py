@@ -125,13 +125,20 @@ class Command(ABC):
           will be formatted to ``echo hello world``
     """
 
-    command = ''
+    def __new__(cls, *args, **kwargs):
+        templates = {}
+        for attr, value in vars(cls).copy().items():
+            if isinstance(value, str) and not attr.startswith('_'):
+                templates[attr] = value
+                delattr(cls, attr)
+        obj = super().__new__(cls)
+        obj._templates = templates
+        return obj
 
     def __init__(self, config: Mapping, *, runner: Callable = None) -> None:
         self._config = config
         self._runner = runner if runner is not None else _run_cmd
-        self._cache = {}  # type: Dict[str, Callable[[], str]]
-        self.formatter = CommandFormatter(self._config)
+        self._formatter = CommandFormatter(self._config)
         self.dry_run = False
 
     def __call__(self, *args: Any, dry_run: bool = False, **kwargs: Any) -> None:
@@ -139,6 +146,7 @@ class Command(ABC):
         self.dry_run = dry_run
         if self.dont_run():
             return
+
         if hasattr(self, 'before_run'):
             self.before_run()
 
@@ -147,32 +155,25 @@ class Command(ABC):
         if hasattr(self, 'after_run'):
             self.after_run()
 
-    def __getitem__(self, name: str) -> Any:
-        return self._config[name]
-
     def __getattr__(self, name: str) -> Callable[[], str]:
-        cached = self._cache.get(name)
-        if cached:
-            return cached
-        if not name.startswith('run_'):
-            raise AttributeError('{} has no attribute {} '.format(type(self), name))
-
-        _, template = name.split('_', 1)
+        if name not in self._templates:
+            raise AttributeError('{} has no attribute {} '
+                                 ''.format(type(self).__name__, name))
 
         def templated() -> str:
             """Format and run a command template."""
-            command = self.formatter(getattr(self, template))
+            command = self._formatter(self._templates[name])
             return self._runner(self, command)
 
         # inspection/debugging
         templated.__name__ = name
-        self._cache[name] = templated
+        setattr(self, name, templated)
         return templated
 
     @property
     def config(self):
-        self._cache.clear()
-        return self.formatter.config
+        self._formatter.__call__.cache_clear()
+        return self._config
 
     @abc.abstractmethod
     def run(self, *args: Any, **kwargs: Any) -> None:
