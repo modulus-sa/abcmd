@@ -16,8 +16,7 @@ A library for wrapping shell commands with static configuration.
 Usage
 -----
 
-The library provides the ``abcmd.Command`` ABC and two helper classes for
-configuration ``abcmd.config.Checker`` and ``abcmd.config.Loader`` that can be used
+The library provides the ``abcmd.Command`` ABC that can be used
 to create shell command wrappers.
 
 Examples
