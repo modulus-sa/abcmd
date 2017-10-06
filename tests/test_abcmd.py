@@ -6,6 +6,11 @@ from abcmd import CommandFormatter, Command
 import pytest
 
 
+@pytest.fixture()
+def run_cmd(mocker):
+    return mocker.Mock(return_value=(0, 'out', 'err'))
+
+
 @pytest.mark.parametrize('template, config, expected', [
     ('init {REPOSITORY}', {'REPOSITORY': '/test_repo'}, 'init /test_repo'),
     # list parameter must be separated with spaces
@@ -93,6 +98,12 @@ def test_CommandFormatter_on_config_change():
 def test_Command_abstract_methods():
     assert Command.__abstractmethods__ == {'run', 'dont_run', 'handle_error'}
 
+    class Runner(Command):
+        pass
+
+    with pytest.raises(TypeError):
+        runner = Runner({})
+
 
 def test_Command_init_arguments():
     class Runner(Command):
@@ -131,7 +142,7 @@ def test_Command_run():
     assert call_list == ['run']
 
 
-def test_Command_creates_methods_for_templates_on_creation():
+def test_Command_creates_callables_and_proper_naming():
     class Runner(Command):
         template0 = 'command one'
         template1 = 'command two'
@@ -147,34 +158,16 @@ def test_Command_creates_methods_for_templates_on_creation():
 
     runner = Runner({})
 
-    assert callable(runner.template0) and runner.template0.__name__ == 'template0'
-    assert callable(runner.template1) and runner.template1.__name__ == 'template1'
+    assert (callable(runner.template0)
+            and runner.template0.__name__ == 'template0'
+            and str(runner.template0) == 'template0 runner')
+
+    assert (callable(runner.template1)
+            and runner.template1.__name__ == 'template1'
+            and str(runner.template1) == 'template1 runner')
 
 
-def test_Command_run_templates(mocker):
-    run_cmd_mock = mocker.Mock()
-
-    class Runner(Command):
-        template = 'command template {-o OPT}'
-
-        def dont_run(self):
-            return False
-
-        def run(self, *args, **kwargs):
-            self.template()
-
-        def handle_error(self, err):
-            pass
-
-    runner = Runner({'OPT': 'argument'}, runner=run_cmd_mock)
-    runner()
-
-    assert runner.template.__name__ == 'template'
-    run_cmd_mock.assert_called_with(runner, 'command template -o argument')
-
-
-def test_Command_run_templates(mocker):
-    run_cmd_mock = mocker.Mock()
+def test_Command_run_templates(mocker, run_cmd):
 
     class Runner(Command):
         template = 'command template {-o OPT}'
@@ -188,11 +181,12 @@ def test_Command_run_templates(mocker):
         def handle_error(self, err):
             pass
 
-    runner = Runner({'OPT': 'argument'}, runner=run_cmd_mock)
+    runner = Runner({'OPT': 'argument'}, runner=run_cmd)
     runner()
 
     assert runner.template.__name__ == 'template'
-    run_cmd_mock.assert_called_with(runner, 'command template -o argument')
+    run_cmd.assert_called_with('command template -o argument')
+
 
 def test_Command_dont_run_prevents_calling_run():
     call_list = []
@@ -289,17 +283,18 @@ def test_Command_caches_templated_functions():
 def test_Command_on_config_change_clears_caches():
     command_stream = []
 
-    def run(runner, cmd):
+    def run(cmd):
         command_stream.append(cmd)
+        return 0, 'out', 'err'
 
     class Runner(Command):
-        cmd = 'command {OPTION}'
+        command = 'command {OPTION}'
 
         def dont_run(self):
             return False
 
         def run(self):
-            self.cmd()
+            self.command()
 
         def handle_error(self, *args):
             pass
@@ -361,14 +356,12 @@ def test_Command_subclassing_keeps_templates_from_all_parent_classes():
 
     runner = SecondRunner({})
 
-    assert runner._templates == {'command_first': 'first',
-                                 'command_second': 'second',
-                                 'command_overwrite': 'second overwrite'}
+    attrs = ('command_first', 'command_second', 'command_overwrite')
+    for attr in attrs:
+        assert callable(getattr(runner, attr))
 
 
-def test_Command_insantiated_more_times(mocker):
-    run_cmd_mock = mocker.Mock()
-
+def test_Command_instantiated_more_times(run_cmd):
     class Runner(Command):
         template = 'command template {-o OPT}'
 
@@ -381,16 +374,14 @@ def test_Command_insantiated_more_times(mocker):
         def handle_error(self, err):
             pass
 
-    runner0 = Runner({'OPT': 'argument'}, runner=run_cmd_mock)
+    runner0 = Runner({'OPT': 'argument'}, runner=run_cmd)
     runner0()
 
 
-    assert runner0.template.__name__ == 'template'
-    run_cmd_mock.assert_called_with(runner0, 'command template -o argument')
+    run_cmd.assert_called_with('command template -o argument')
 
 
-    runner1 = Runner({'OPT': 'argument'}, runner=run_cmd_mock)
+    runner1 = Runner({'OPT': 'argument'}, runner=run_cmd)
     runner1()
 
-    assert runner1.template.__name__ == 'template'
-    run_cmd_mock.assert_called_with(runner1, 'command template -o argument')
+    run_cmd.assert_called_with('command template -o argument')

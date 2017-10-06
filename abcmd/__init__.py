@@ -103,14 +103,59 @@ class CommandFormatter(Formatter):
         return val
 
 
-class Command(ABC):
+class CommandTemplate:
+    def __init__(self, name, template):
+        self.name = name
+        self.template = template
+
+    def __get__(self, instance, cls):
+        if not instance:
+            return self
+
+        runner = CommandRunner(self.name, instance, self.template)
+        setattr(instance, self.name, runner)
+        return runner
+
+
+class CommandRunner:
+
+    def __init__(self, name, instance, template):
+        self.__name__ = name
+        self.instance = instance
+        self.template = template
+
+    def __call__(self, *args, **kwargs):
+        if self.instance.dry_run:
+            return ''
+        command = self.instance._formatter(self.template)
+        rc, out, err = self.instance._runner(command)
+        if rc != 0 and not self.instance.handle_error(command, err):
+            msg = '{}: {}'.format(command, err)
+            logging.error('Unhandled error: ' + msg)
+            raise sp.SubprocessError(msg)
+        return out, err
+
+    def __repr__(self):
+        return '{} runner'.format(self.__name__)
+
+
+class MetaCommand(abc.ABCMeta):
+    def __new__(cls, name, bases, namespace):
+        if bases:
+            for key, val in namespace.items():
+                if not key.startswith('_') and isinstance(val, str):
+                    namespace[key] = CommandTemplate(key, val)
+        return super().__new__(cls, name, bases, namespace)
+
+
+class Command(metaclass=MetaCommand):
     """Base class of all command runners.
 
     Subclassing this ABC provides the following features:
 
         - A command template format string defined at the class level
-          is formatted and run by invoking a method with the name
-          'run_' + template name, for example::
+          is formatted and run by invoking an attribute with the 
+          template name, for example::
 
               .. code:: python
 
@@ -118,24 +163,12 @@ class Command(ABC):
                       greet = 'echo hello {name}'
 
                   mycmd = MyCommand({'name': 'world'})
-                  mycmd.run_greet()
+                  mycmd.greet()
 
-        - Template formatting uses the provided configuration on
-          the constructor, in the above example the command
+        - Template formatting uses the provided configuration
+          on initiation, in the above example the command
           will be formatted to ``echo hello world``
     """
-
-    def __new__(cls, *args, **kwargs):
-        templates = {}
-        for base in reversed(cls.mro()):
-            for attr, value in vars(base).copy().items():
-                if isinstance(value, str) and not attr.startswith('_'):
-                    templates[attr] = value
-
-        obj = super().__new__(cls)
-        obj._templates = templates  # noqa
-        return obj
-
     def __init__(self, config: Mapping, *, runner: Callable = None) -> None:
         self._config = config
         self._runner = runner if runner is not None else _run_cmd
@@ -155,22 +188,6 @@ class Command(ABC):
 
         if hasattr(self, 'after_run'):
             self.after_run()
-
-    def __getattribute__(self, name: str) -> Callable[[], str]:
-        obj_dict = super().__dict__
-        templates = super().__getattribute__('_templates')
-        if name in obj_dict or name not in templates:
-            return super().__getattribute__(name)
-
-        def templated() -> str:
-            """Format and run a command template."""
-            command = self._formatter(self._templates[name])
-            return self._runner(self, command)
-
-        # inspection/debugging
-        templated.__name__ = name
-        setattr(self, name, templated)
-        return templated
 
     @property
     def config(self):
@@ -193,11 +210,9 @@ class Command(ABC):
         """
 
 
-def _run_cmd(cls, cmd: str) -> str:
+def _run_cmd(cmd: str) -> str:
     command = shlex.split(cmd)
     logging.debug("Running '%s':", cmd)
-    if cls.dry_run:
-        return ''
 
     proc = sp.Popen(command, stdout=sp.PIPE, stderr=sp.PIPE)
     out, error = proc.communicate()  # block
@@ -211,8 +226,4 @@ def _run_cmd(cls, cmd: str) -> str:
         out = out.decode(errors='replace')
         error = error.decode(errors='replace')
 
-    if proc.returncode != 0 and not cls.handle_error(cmd, error):
-        msg = '{}: {}'.format(cmd, error)
-        logging.error('Unhandled error: ' + msg)
-        raise sp.SubprocessError(msg)
-    return out + error
+    return (proc.returncode, out, error)
