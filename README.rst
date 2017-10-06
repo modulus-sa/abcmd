@@ -40,9 +40,9 @@ First we subclass ``Command`` and describe the procedure:
 
         def run(self, *args, **kwargs):
             os.chdir(os.environ['HOME'])
-            self.run_make()
-            self.run_copy()
-            self.run_sync()
+            self.make()
+            self.copy()
+            self.sync()
 
         def dont_run(self, *args, **kwargs):
             # don't run between working hours

@@ -20,13 +20,6 @@ else:
     import collections.abc as cabc
     from typing import Any, Union, Sequence, Mapping, Callable, Dict
 
-if sys.version_info.minor < 4:
-    class ABC:
-        """Stub ABC for python < 3.4"""
-
-else:
-    from abc import ABC
-
 if sys.version_info.minor < 3:
     class SubprocessError(Exception):
         """Called when a process errors for python < 3.4"""
