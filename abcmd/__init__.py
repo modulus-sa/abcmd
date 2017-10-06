@@ -127,12 +127,13 @@ class Command(ABC):
 
     def __new__(cls, *args, **kwargs):
         templates = {}
-        for attr, value in vars(cls).copy().items():
-            if isinstance(value, str) and not attr.startswith('_'):
-                templates[attr] = value
-                delattr(cls, attr)
+        for base in reversed(cls.mro()):
+            for attr, value in vars(base).copy().items():
+                if isinstance(value, str) and not attr.startswith('_'):
+                    templates[attr] = value
+
         obj = super().__new__(cls)
-        obj._templates = templates
+        obj._templates = templates  # noqa
         return obj
 
     def __init__(self, config: Mapping, *, runner: Callable = None) -> None:
@@ -155,10 +156,11 @@ class Command(ABC):
         if hasattr(self, 'after_run'):
             self.after_run()
 
-    def __getattr__(self, name: str) -> Callable[[], str]:
-        if name not in self._templates:
-            raise AttributeError('{} has no attribute {} '
-                                 ''.format(type(self).__name__, name))
+    def __getattribute__(self, name: str) -> Callable[[], str]:
+        obj_dict = super().__dict__
+        templates = super().__getattribute__('_templates')
+        if name in obj_dict or name not in templates:
+            return super().__getattribute__(name)
 
         def templated() -> str:
             """Format and run a command template."""

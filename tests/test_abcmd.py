@@ -131,7 +131,7 @@ def test_Command_run():
     assert call_list == ['run']
 
 
-def test_Command_stores_templates_on_creation():
+def test_Command_creates_methods_for_templates_on_creation():
     class Runner(Command):
         template0 = 'command one'
         template1 = 'command two'
@@ -147,8 +147,9 @@ def test_Command_stores_templates_on_creation():
 
     runner = Runner({})
 
-    assert runner._templates == {'template0': 'command one',
-                                 'template1': 'command two'}
+    assert callable(runner.template0) and runner.template0.__name__ == 'template0'
+    assert callable(runner.template1) and runner.template1.__name__ == 'template1'
+
 
 def test_Command_run_templates(mocker):
     run_cmd_mock = mocker.Mock()
@@ -171,6 +172,27 @@ def test_Command_run_templates(mocker):
     assert runner.template.__name__ == 'template'
     run_cmd_mock.assert_called_with(runner, 'command template -o argument')
 
+
+def test_Command_run_templates(mocker):
+    run_cmd_mock = mocker.Mock()
+
+    class Runner(Command):
+        template = 'command template {-o OPT}'
+
+        def dont_run(self):
+            return False
+
+        def run(self, *args, **kwargs):
+            self.template()
+
+        def handle_error(self, err):
+            pass
+
+    runner = Runner({'OPT': 'argument'}, runner=run_cmd_mock)
+    runner()
+
+    assert runner.template.__name__ == 'template'
+    run_cmd_mock.assert_called_with(runner, 'command template -o argument')
 
 def test_Command_dont_run_prevents_calling_run():
     call_list = []
@@ -316,3 +338,59 @@ def test_Command_runs_run_before_and_run_after_if_they_are_defined():
     runner()
 
     assert command_stream == ['before', 'after']
+
+
+def test_Command_subclassing_keeps_templates_from_all_parent_classes():
+
+    class FirstRunner(Command):
+        command_first = 'first'
+        command_overwrite = 'first overwrite'
+
+        def run(self):
+            pass
+
+        def dont_run(self):
+            pass
+
+        def handle_error(self):
+            pass
+
+    class SecondRunner(FirstRunner):
+        command_second = 'second'
+        command_overwrite = 'second overwrite'
+
+    runner = SecondRunner({})
+
+    assert runner._templates == {'command_first': 'first',
+                                 'command_second': 'second',
+                                 'command_overwrite': 'second overwrite'}
+
+
+def test_Command_insantiated_more_times(mocker):
+    run_cmd_mock = mocker.Mock()
+
+    class Runner(Command):
+        template = 'command template {-o OPT}'
+
+        def dont_run(self):
+            return False
+
+        def run(self, *args, **kwargs):
+            self.template()
+
+        def handle_error(self, err):
+            pass
+
+    runner0 = Runner({'OPT': 'argument'}, runner=run_cmd_mock)
+    runner0()
+
+
+    assert runner0.template.__name__ == 'template'
+    run_cmd_mock.assert_called_with(runner0, 'command template -o argument')
+
+
+    runner1 = Runner({'OPT': 'argument'}, runner=run_cmd_mock)
+    runner1()
+
+    assert runner1.template.__name__ == 'template'
+    run_cmd_mock.assert_called_with(runner1, 'command template -o argument')
