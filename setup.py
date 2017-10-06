@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="abcmd",
-    version="0.3.0",
+    version="0.3.1",
     url="https://github.com/laerus/abcmd",
 
     author="Konstantinos Tsakiltzidis",
