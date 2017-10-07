@@ -5,7 +5,6 @@ verify_ssl = true
 [packages]
 toml = "*"
 
-
 [dev-packages]
 
 pytest = "*"

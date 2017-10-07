@@ -17,7 +17,7 @@ pytest-mypy==0.3.0
 pytest-watch==4.1.0
 requests==2.18.4
 requests-toolbelt==0.8.0
-toml==0.9.3
+toml
 tqdm==4.19.1.post1
 twine==1.9.1
 typed-ast==1.1.0
