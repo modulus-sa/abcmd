@@ -100,13 +100,16 @@ class CommandTemplate:
     def __init__(self, name, template):
         self.name = name
         self.template = template
+        self.runners = {}
 
     def __get__(self, instance, cls):
         if not instance:
             return self
+        if instance in self.runners:
+            return self.runners[instance]
 
         runner = CommandRunner(self.name, instance, self.template)
-        setattr(instance, self.name, runner)
+        self.runners[instance] = runner
         return runner
 
 
@@ -129,7 +132,7 @@ class CommandRunner:
         return out, err
 
     def __repr__(self):
-        return '{} runner'.format(self.__name__)
+        return '{} runner at {}'.format(self.__name__, id(self))
 
 
 class MetaCommand(abc.ABCMeta):

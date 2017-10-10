@@ -160,11 +160,11 @@ def test_Command_creates_callables_and_proper_naming():
 
     assert (callable(runner.template0)
             and runner.template0.__name__ == 'template0'
-            and str(runner.template0) == 'template0 runner')
+            and str(runner.template0).startswith('template0 runner'))
 
     assert (callable(runner.template1)
             and runner.template1.__name__ == 'template1'
-            and str(runner.template1) == 'template1 runner')
+            and str(runner.template1).startswith('template1 runner'))
 
 
 def test_Command_run_templates(mocker, run_cmd):
@@ -276,8 +276,9 @@ def test_Command_caches_templated_functions():
 
     first_function = runner.echo
     second_function = runner.echo
+    third_function = runner.echo
 
-    assert first_function is second_function
+    assert first_function is second_function is third_function
 
 
 def test_Command_on_config_change_clears_caches():
@@ -301,11 +302,11 @@ def test_Command_on_config_change_clears_caches():
 
     runner = Runner({'OPTION': 'option'}, runner=run)
     runner()
-    assert command_stream[-1] == 'command option'
+    assert command_stream.pop() == 'command option'
 
     runner.config['OPTION'] = 'changed'
     runner()
-    assert command_stream[-1] == 'command changed'
+    assert command_stream.pop() == 'command changed'
 
 
 def test_Command_runs_run_before_and_run_after_if_they_are_defined():
@@ -385,3 +386,40 @@ def test_Command_instantiated_more_times(run_cmd):
     runner1()
 
     run_cmd.assert_called_with('command template -o argument')
+
+
+def test_Command_subclassing_with_overwriting_templates_as_methods_and_calling_super():
+    command_stream = []
+
+    def run(cmd):
+        command_stream.append(cmd)
+        return 0, 'out', 'err'
+
+    class Runner(Command):
+        template = 'command {OPTION}'
+
+        def dont_run(self):
+            return False
+
+        def run(self, *args, **kwargs):
+            self.template()
+
+        def handle_error(self, err):
+            pass
+
+    class SubRunner(Runner):
+        def template(self):
+            command_stream.append('subrunner template start')
+            super().template()
+            command_stream.append('subrunner template end')
+
+    runner = SubRunner({'OPTION': 'OK'}, runner=run)
+    runner()
+    runner()
+
+    assert command_stream == ['subrunner template start',
+                              'command OK',
+                              'subrunner template end',
+                              'subrunner template start',
+                              'command OK',
+                              'subrunner template end']
