@@ -1,6 +1,6 @@
 """abcmd - ABCs & Mixins for wrapping commands with static configuration."""
 
-__version__ = '0.2.4'
+__version__ = '0.3.2'
 __author__ = 'Konstantinos Tsakiltzidis <laerusk@gmail.com>'
 __all__ = ('Command',)
 
@@ -20,11 +20,10 @@ else:
     import collections.abc as cabc
     from typing import Any, Union, Sequence, Mapping, Callable, Dict
 
-if sys.version_info.minor < 4:
-    class ABC:
-        """Stub ABC for python < 3.4"""
-else:
-    from abc import ABC
+if sys.version_info.minor < 3:
+    class SubprocessError(Exception):
+        """Called when a process errors for python < 3.4"""
+    sp.SubprocessError = SubprocessError
 
 
 class CommandFormatter(Formatter):
@@ -97,14 +96,62 @@ class CommandFormatter(Formatter):
         return val
 
 
-class Command(ABC):
+class CommandTemplate:
+    def __init__(self, name, template):
+        self.name = name
+        self.template = template
+        self.runners = {}
+
+    def __get__(self, instance, cls):
+        if not instance:
+            return self
+        if instance in self.runners:
+            return self.runners[instance]
+
+        runner = CommandRunner(self.name, instance, self.template)
+        self.runners[instance] = runner
+        return runner
+
+
+class CommandRunner:
+
+    def __init__(self, name, instance, template):
+        self.__name__ = name
+        self.instance = instance
+        self.template = template
+
+    def __call__(self, *args, **kwargs):
+        if self.instance.dry_run:
+            return ''
+        command = self.instance._formatter(self.template)
+        rc, out, err = self.instance._runner(command)
+        if rc != 0 and not self.instance.handle_error(command, err):
+            msg = '{}: {}'.format(command, err)
+            logging.error('Unhandled error: ' + msg)
+            raise sp.SubprocessError(msg)
+        return out, err
+
+    def __repr__(self):
+        return '{} runner at {}'.format(self.__name__, id(self))
+
+
+class MetaCommand(abc.ABCMeta):
+    def __new__(cls, name, bases, namespace):
+        if bases:
+            for key, val in namespace.items():
+                if not key.startswith('_') and isinstance(val, str):
+                    namespace[key] = CommandTemplate(key, val)
+        return super().__new__(cls, name, bases, namespace)
+
+
+class Command(metaclass=MetaCommand):
     """Base class of all command runners.
 
     Subclassing this ABC provides the following features:
 
         - A command template format string defined at the class level
-          is formatted and run by invoking a method with the name
-          'run_' + template name, for example::
+          is formatted and run by invoking an attribute with the 
+          template name, for example::
 
               .. code:: python
 
@@ -112,20 +159,16 @@ class Command(ABC):
                       greet = 'echo hello {name}'
 
                   mycmd = MyCommand({'name': 'world'})
-                  mycmd.run_greet()
+                  mycmd.greet()
 
-        - Template formatting uses the provided configuration on
-          the constructor, in the above example the command
+        - Template formatting uses the provided configuration
+          on initiation, in the above example the command
           will be formatted to ``echo hello world``
     """
-
-    command = ''
-
     def __init__(self, config: Mapping, *, runner: Callable = None) -> None:
         self._config = config
         self._runner = runner if runner is not None else _run_cmd
-        self._cache = {}  # type: Dict[str, Callable[[], str]]
-        self.formatter = CommandFormatter(self._config)
+        self._formatter = CommandFormatter(self._config)
         self.dry_run = False
 
     def __call__(self, *args: Any, dry_run: bool = False, **kwargs: Any) -> None:
@@ -133,6 +176,7 @@ class Command(ABC):
         self.dry_run = dry_run
         if self.dont_run():
             return
+
         if hasattr(self, 'before_run'):
             self.before_run()
 
@@ -141,32 +185,10 @@ class Command(ABC):
         if hasattr(self, 'after_run'):
             self.after_run()
 
-    def __getitem__(self, name: str) -> Any:
-        return self._config[name]
-
-    def __getattr__(self, name: str) -> Callable[[], str]:
-        cached = self._cache.get(name)
-        if cached:
-            return cached
-        if not name.startswith('run_'):
-            raise AttributeError('{} has no attribute {} '.format(type(self), name))
-
-        _, template = name.split('_', 1)
-
-        def templated() -> str:
-            """Format and run a command template."""
-            command = self.formatter(getattr(self, template))
-            return self._runner(self, command)
-
-        # inspection/debugging
-        templated.__name__ = name
-        self._cache[name] = templated
-        return templated
-
     @property
     def config(self):
-        self._cache.clear()
-        return self.formatter.config
+        self._formatter.__call__.cache_clear()
+        return self._config
 
     @abc.abstractmethod
     def run(self, *args: Any, **kwargs: Any) -> None:
@@ -184,11 +206,9 @@ class Command(ABC):
         """
 
 
-def _run_cmd(cls, cmd: str) -> str:
+def _run_cmd(cmd: str) -> str:
     command = shlex.split(cmd)
     logging.debug("Running '%s':", cmd)
-    if cls.dry_run:
-        return ''
 
     proc = sp.Popen(command, stdout=sp.PIPE, stderr=sp.PIPE)
     out, error = proc.communicate()  # block
@@ -202,8 +222,4 @@ def _run_cmd(cls, cmd: str) -> str:
         out = out.decode(errors='replace')
         error = error.decode(errors='replace')
 
-    if proc.returncode != 0 and not cls.handle_error(cmd, error):
-        msg = '{}: {}'.format(cmd, error)
-        logging.error('Unhandled error: ' + msg)
-        raise sp.SubprocessError(msg)
-    return out.strip(), error.strip()
+    return (proc.returncode, out, error)

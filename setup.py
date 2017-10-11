@@ -2,13 +2,13 @@ import setuptools
 
 setuptools.setup(
     name="abcmd",
-    version="0.2.4",
+    version="0.3.2",
     url="https://github.com/laerus/abcmd",
 
     author="Konstantinos Tsakiltzidis",
     author_email="laerusk@gmail.com",
 
-    description="ABCs and Mixins for wrapping CLI commands with static configuration.",
+    description="Library for wrapping CLI commands with static configuration.",
     long_description=open('README.rst').read(),
 
     packages=setuptools.find_packages(),
