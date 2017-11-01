@@ -19,13 +19,13 @@ Usage
 The library provides the ``abcmd.Command`` ABC that can be used
 to create shell command wrappers.
 
-Subclassing ``abcmd.Command`` requires the following methods to be implemented::
+Subclassing ``abcmd.Command`` requires the following methods to be implemented:
 
     * ``run``
     * ``dont_run``
     * ``handle_error``
 
-in addition the following methods are optional and will run only if implemented::
+in addition the following methods are optional and will run only if implemented:
 
    * ``before_run``
    * ``after_run``
