@@ -12,64 +12,68 @@ def run_cmd(mocker):
 
 
 @pytest.mark.parametrize('template, config, expected', [
-    ('init {REPOSITORY}', {'REPOSITORY': '/test_repo'}, 'init /test_repo'),
+    ('cmd {option0}', {'option0': 'test_option'}, 'cmd test_option'),
     # list parameter must be separated with spaces
-    ('create {REPOSITORY}::{ARCHIVE} {PATHS}',
-     {'REPOSITORY': '/test_repo', 'ARCHIVE': 'test_archive', 'PATHS': ['path0', 'path1']},
-     'create /test_repo::test_archive path0 path1'),
-    # boolean parameter must exist if True
-    ('create {REPOSITORY}::{ARCHIVE} {PATHS} {VERBOSE}',
-     {'REPOSITORY': '/test_repo', 'ARCHIVE': 'test_archive',
-      'PATHS': ['test_path'], 'VERBOSE': True},
-     'create /test_repo::test_archive test_path --verbose'),
+    ('command {option0}::{option1} {option2}',
+     {'option0': 'test_option', 'option1': 'test_option1', 'option2': ['path0', 'path1']},
+     'command test_option::test_option1 path0 path1'),
+    # boolean parameter must exist if true
+    ('command {option0}::{option1} {option2} {verbose}',
+     {'option0': 'test_option', 'option1': 'test_option1',
+      'option2': ['test_path'], 'verbose': True},
+     'command test_option::test_option1 test_path --verbose'),
     # boolean parameter has right name
-    ('create {REPOSITORY}::{ARCHIVE} {PATHS} {READ_SPECIAL}',
-     {'REPOSITORY': '/test_repo', 'ARCHIVE': 'test_archive',
-      'PATHS': ['test_path'], 'READ_SPECIAL': True},
-     'create /test_repo::test_archive test_path --read-special'),
-    # boolean parameter must not exist if False
-    ('create {REPOSITORY}::{ARCHIVE} {PATHS} {VERBOSE}',
-     {'REPOSITORY': '/test_repo', 'ARCHIVE': 'test_archive',
-      'PATHS': ['test_path'], 'VERBOSE': False},
-     'create /test_repo::test_archive test_path'),
+    ('command {option0}::{option1} {option2} {bool_option}',
+     {'option0': 'test_option', 'option1': 'test_option1',
+      'option2': ['test_path'], 'bool_option': True},
+     'command test_option::test_option1 test_path --bool-option'),
+    # boolean parameter must not exist if false
+    ('command {option0}::{option1} {option2} {verbose}',
+     {'option0': 'test_option', 'option1': 'test_option1',
+      'option2': ['test_path'], 'verbose': False},
+     'command test_option::test_option1 test_path'),
     # optional non boolean parameter
-    ('init {REPOSITORY} {-e ENCRYPTION}',
-     {'REPOSITORY': '/test_repo', 'ENCRYPTION': 'keyfile'},
-     'init /test_repo -e keyfile'),
+    ('init {option0} {-e option1}',
+     {'option0': 'test_option', 'option1': 'keyfile'},
+     'init test_option -e keyfile'),
     # positional list parameter
-    ('command {ARGS}',
-     {'ARGS': [1, 2, 3, 4]},
+    ('command {args}',
+     {'args': [1, 2, 3, 4]},
      'command 1 2 3 4'),
     # optional non boolean list parameter
-    ('create {REPOSITORY}::{ARCHIVE} {PATHS} {-e EXCLUDE}',
-     {'REPOSITORY': '/test_repo', 'ARCHIVE': 'test_archive',
-      'PATHS': ['test_path'], 'EXCLUDE': ['/exclude0', '/exclude1']},
-     'create /test_repo::test_archive test_path -e /exclude0 -e /exclude1'),
-    # optional non boolean EMPTY list parameter
-    ('create {REPOSITORY}::{ARCHIVE} {PATHS} {-e EXCLUDE}',
-     {'REPOSITORY': '/test_repo', 'ARCHIVE': 'test_archive',
-      'PATHS': ['test_path'], 'EXCLUDE': []},
-     'create /test_repo::test_archive test_path'),
-    # optional non boolean EMPTY string parameter
-    ('create {REPOSITORY}::{ARCHIVE} {PATHS} {-C COMPRESSION}',
-     {'REPOSITORY': '/test_repo', 'ARCHIVE': 'test_archive',
-      'PATHS': ['test_path'], 'COMPRESSION': ''},
-     'create /test_repo::test_archive test_path'),
+    ('command {option0}::{option1} {option2} {-e list_option}',
+     {'option0': 'test_option', 'option1': 'test_option1',
+      'option2': ['test_path'], 'list_option': ['/list_option0', '/list_option1']},
+     'command test_option::test_option1 test_path -e /list_option0 -e /list_option1'),
+    # optional non boolean empty list parameter
+    ('command {option0}::{option1} {option2} {-e list_option}',
+     {'option0': 'test_option', 'option1': 'test_option1',
+      'option2': ['test_path'], 'list_option': []},
+     'command test_option::test_option1 test_path'),
+    # optional non boolean empty string parameter
+    ('command {option0}::{option1} {option2} {-c empty_option}',
+     {'option0': 'test_option', 'option1': 'test_option1',
+      'option2': ['test_path'], 'empty_option': ''},
+     'command test_option::test_option1 test_path'),
     # handle int parameters
-    ('prune {-H KEEP_HOURLY}',
-     {'KEEP_HOURLY': 1},
-     'prune -H 1'),
-    # handle "0" as a non Falsy value
-    ('command {-o ARG}',
-     {'ARG': 0},
+    ('command {-h keep_hourly}',
+     {'keep_hourly': 1},
+     'command -h 1'),
+    # handle "0" as a non falsy value
+    ('command {-o arg}',
+     {'arg': 0},
      'command -o 0'),
     # long parameters
-    ('prune {--keep-hourly KEEP_HOURLY}',
-     {'KEEP_HOURLY': 1},
-     'prune --keep-hourly 1'),
+    ('command {--long long_option}',
+     {'long_option': 1},
+     'command --long 1'),
+    # long parameters list
+    ('command {--long long_option}',
+     {'long_option': [1, 2, 3]},
+     'command --long 1 --long 2 --long 3'),
     # ingore extra args in format field
-    ('command {-o OPTION OPTION2}',
-     {'OPTION': 'opt'},
+    ('command {-o option option2}',
+     {'option': 'opt'},
      'command -o opt'),
     # positional argument
     ('command {ARG}', {'ARG': 10}, 'command 10'),
