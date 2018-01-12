@@ -392,9 +392,13 @@ def test_subclass_inherits_error_handler_decorated_methods():
             return True
 
     class SubRunner(Runner):
-        pass
+        @error_handler('command', 'ERROR OUTPUT')
+        def another_error_handler(self, error):
+            command_flow.append('another_error_handler')
+            return True
 
     runner = SubRunner({}, runner=run)
     runner()
 
-    assert command_flow
+    assert ('handle_some_error' in command_flow 
+            and 'another_error_handler' in command_flow)
