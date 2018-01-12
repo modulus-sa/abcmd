@@ -262,6 +262,9 @@ def _run_cmd(cmd: str) -> str:
 
 
 def error_handler(command, error):
+    """Method decorator for handling specific errors.
+    First argument is command to match too, the second argument
+    is a regular expression to match the error."""
     def wrapper(func):
         @wraps(func)
         def handler(self, *args, **kwargs):

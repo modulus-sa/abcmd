@@ -22,13 +22,17 @@ to create shell command wrappers.
 Subclassing ``abcmd.Command`` requires the following methods to be implemented:
 
 * ``run``
-* ``dont_run``
-* ``handle_error``
 
 in addition the following methods are optional and will run only if implemented:
 
+* ``dont_run``
+* ``handle_error``
 * ``before_run``
 * ``after_run``
+
+The decorator ``abcmd.error_handler`` is used to decorate subclass methods which
+are called only for the matching errors, errors that don't have specific handlers
+will fall back to calling the ``handle_error`` method if it's implemented.
 
 Examples
 --------
