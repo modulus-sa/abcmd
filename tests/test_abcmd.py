@@ -1,7 +1,7 @@
 import subprocess as sp
 
 import abcmd
-from abcmd import CommandFormatter, Command
+from abcmd import CommandFormatter, Command, error_handler
 
 import pytest
 
@@ -97,16 +97,6 @@ def test_CommandFormatter_on_config_change():
 
     formatter.config['OPTION'] = 'changed'
     assert formatter('command {OPTION}') == 'command changed'
-
-
-def test_Command_abstract_methods():
-    assert Command.__abstractmethods__ == {'run', 'dont_run', 'handle_error'}
-
-    class Runner(Command):
-        pass
-
-    with pytest.raises(TypeError):
-        runner = Runner({})
 
 
 def test_Command_init_arguments():
@@ -427,3 +417,30 @@ def test_Command_subclassing_with_overwriting_templates_as_methods_and_calling_s
                               'subrunner template start',
                               'command OK',
                               'subrunner template end']
+
+
+def test_error_handler_decorator():
+    command_flow = []
+
+    def run(cmd):
+        return 1, 'out', 'ERROR OUTPUT'
+
+    class Runner(Command):
+        cmd = 'command'
+
+        def run(self, *args, **kwargs):
+           self.cmd()
+
+        def dont_run(self, *args, **kwargs):
+            ...
+
+        @error_handler(cmd, 'ERROR OUTPUT')
+        def handle_some_error(self):
+            assert isinstance(self, Runner)
+            command_flow.append('handle_some_error')
+            return True
+
+    runner = Runner({}, runner=run)
+    runner()
+
+    assert command_flow

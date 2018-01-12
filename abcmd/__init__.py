@@ -6,10 +6,11 @@ __all__ = ('Command',)
 
 
 import abc
+import re
 import shlex
 import subprocess as sp
 import sys
-from functools import lru_cache
+from functools import lru_cache, wraps
 from string import Formatter
 import logging
 
@@ -96,7 +97,7 @@ class CommandFormatter(Formatter):
         return val
 
 
-class CommandTemplate:
+class CommandSpec:
     def __init__(self, name, template):
         self.name = name
         self.template = template
@@ -125,11 +126,34 @@ class CommandRunner:
             return ''
         command = self.instance._formatter(self.template)
         rc, out, err = self.instance._runner(command)
-        if rc != 0 and not self.instance.handle_error(command, err):
-            msg = '{}: {}'.format(command, err)
-            logging.error('Unhandled error: ' + msg)
-            raise sp.SubprocessError(msg)
+        if rc != 0:
+            self.handle_error(command, err)
         return out, err
+
+    def handle_error(self, command, error):
+        handlers = self.get_error_handlers(command, error)
+
+        if handlers:
+            for handler in handlers:
+                if not handler(self.instance):
+                    break
+            else:
+                return
+        elif hasattr(self.instance, 'handle_error'):
+            if self.instance.handle_error(command, error):
+                return
+
+        msg = '{}: {}'.format(command, error)
+        logging.error('Unhandled error: ' + msg)
+        raise sp.SubprocessError(msg)
+
+    def get_error_handlers(self, command, error):
+        return [handler for handler in self.instance._handlers
+                if self.is_matching_handler(handler, command, error)]
+
+    def is_matching_handler(self, handler, command, error):
+        return bool(re.match(command, handler._handle['command'])
+                    and re.search(error, handler._handle['error']))
 
     def __repr__(self):
         return '{} runner at {}'.format(self.__name__, id(self))
@@ -137,10 +161,19 @@ class CommandRunner:
 
 class MetaCommand(abc.ABCMeta):
     def __new__(cls, name, bases, namespace):
-        if bases:
-            for key, val in namespace.items():
-                if not key.startswith('_') and isinstance(val, str):
-                    namespace[key] = CommandTemplate(key, val)
+        if not bases:
+            return super().__new__(cls, name, bases, namespace)
+
+        namespace['_handlers'] = []
+
+        for key, val in namespace.items():
+            if key.startswith('_'):
+                continue
+            elif isinstance(val, str):
+                namespace[key] = CommandSpec(key, val)
+            elif callable(val) and hasattr(val, '_handle'):
+                namespace['_handlers'].append(val)
+
         return super().__new__(cls, name, bases, namespace)
 
 
@@ -199,12 +232,6 @@ class Command(metaclass=MetaCommand):
         """Return True to cancel running.
         This is called before run."""
 
-    @abc.abstractmethod
-    def handle_error(self, cmd: str, error: str) -> bool:
-        """Called on any error from commands. Return True
-        to continue running or False to abort.
-        """
-
 
 def _run_cmd(cmd: str) -> str:
     command = shlex.split(cmd)
@@ -223,3 +250,16 @@ def _run_cmd(cmd: str) -> str:
         error = error.decode(errors='replace')
 
     return (proc.returncode, out, error)
+
+
+def error_handler(command, error):
+    def wrapper(func):
+        @wraps(func)
+        def handler(self, *args, **kwargs):
+            return func(self, *args, **kwargs)
+
+        handler._handle = {'command': command,
+                           'error': error}
+        return handler
+
+    return wrapper
