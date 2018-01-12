@@ -150,8 +150,9 @@ class CommandRunner:
                 if self.is_matching_handler(handler, command, error)]
 
     def is_matching_handler(self, handler, command, error):
-        return bool(command.startswith(handler._handle['command'])
-                    and re.search(error, handler._handle['error']))
+        command_matches = bool(re.search(handler._handler['command'], command))
+        error_matches = bool(re.search(handler._handler['error'], error))
+        return command_matches and error_matches
 
     def __repr__(self):
         return '{} runner at {}'.format(self.__name__, id(self))
@@ -170,7 +171,7 @@ class MetaCommand(abc.ABCMeta):
                 continue
             elif isinstance(val, str):
                 namespace[key] = CommandSpec(key, val)
-            elif callable(val) and hasattr(val, '_handle'):
+            elif callable(val) and hasattr(val, '_handler'):
                 handlers.append(val)
 
         namespace['_handlers'] = handlers
@@ -273,8 +274,8 @@ def error_handler(command, error):
         def handler(self, *args, **kwargs):
             return func(self, *args, **kwargs)
 
-        handler._handle = {'command': command,
-                           'error': error}
+        handler._handler = {'command': command,
+                            'error': error}
         return handler
 
     return wrapper

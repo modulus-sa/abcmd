@@ -377,7 +377,7 @@ def test_subclass_inherits_error_handler_decorated_methods():
     command_flow = []
 
     def run(cmd):
-        return 1, 'out', 'ERROR OUTPUT'
+        return 1, 'out', 'ERROR OUTPUT WITH MORE INFO'
 
     class Runner(Command):
         cmd = 'command with args'
@@ -385,14 +385,14 @@ def test_subclass_inherits_error_handler_decorated_methods():
         def run(self, *args, **kwargs):
            self.cmd()
 
-        @error_handler('command', 'ERROR OUTPUT')
+        @error_handler('command', 'ERROR OUTPUT .*')
         def handle_some_error(self, error):
             assert isinstance(self, Runner)
             command_flow.append('handle_some_error')
             return True
 
     class SubRunner(Runner):
-        @error_handler('command', 'ERROR OUTPUT')
+        @error_handler('^command', 'ERROR OUTPUT .*')
         def another_error_handler(self, error):
             command_flow.append('another_error_handler')
             return True
