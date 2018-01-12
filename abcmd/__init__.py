@@ -1,6 +1,6 @@
 """abcmd - ABCs & Mixins for wrapping commands with static configuration."""
 
-__version__ = '0.3.2'
+__version__ = '0.3.3'
 __author__ = 'Konstantinos Tsakiltzidis <laerusk@gmail.com>'
 __all__ = ('Command',)
 
