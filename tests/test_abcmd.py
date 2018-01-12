@@ -371,3 +371,30 @@ def test_error_handler_decorator():
     runner()
 
     assert command_flow
+
+
+def test_subclass_inherits_error_handler_decorated_methods():
+    command_flow = []
+
+    def run(cmd):
+        return 1, 'out', 'ERROR OUTPUT'
+
+    class Runner(Command):
+        cmd = 'command with args'
+
+        def run(self, *args, **kwargs):
+           self.cmd()
+
+        @error_handler('command', 'ERROR OUTPUT')
+        def handle_some_error(self, error):
+            assert isinstance(self, Runner)
+            command_flow.append('handle_some_error')
+            return True
+
+    class SubRunner(Runner):
+        pass
+
+    runner = SubRunner({}, runner=run)
+    runner()
+
+    assert command_flow

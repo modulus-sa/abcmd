@@ -162,7 +162,8 @@ class MetaCommand(abc.ABCMeta):
         if not bases:
             return super().__new__(cls, name, bases, namespace)
 
-        namespace['_handlers'] = []
+        handlers = [handler for base in bases
+                    for handler in getattr(base, '_handlers', ())]
 
         for key, val in namespace.items():
             if key.startswith('_'):
@@ -170,7 +171,9 @@ class MetaCommand(abc.ABCMeta):
             elif isinstance(val, str):
                 namespace[key] = CommandSpec(key, val)
             elif callable(val) and hasattr(val, '_handle'):
-                namespace['_handlers'].append(val)
+                handlers.append(val)
+
+        namespace['_handlers'] = handlers
 
         return super().__new__(cls, name, bases, namespace)
 
