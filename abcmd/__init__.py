@@ -133,7 +133,7 @@ class CommandRunner:
 
         if handlers:
             for handler in handlers:
-                if not handler(self.instance):
+                if not handler(self.instance, error):
                     break
             else:
                 return
@@ -150,7 +150,7 @@ class CommandRunner:
                 if self.is_matching_handler(handler, command, error)]
 
     def is_matching_handler(self, handler, command, error):
-        return bool(re.match(command, handler._handle['command'])
+        return bool(command.startswith(handler._handle['command'])
                     and re.search(error, handler._handle['error']))
 
     def __repr__(self):

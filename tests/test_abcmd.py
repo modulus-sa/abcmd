@@ -356,13 +356,13 @@ def test_error_handler_decorator():
         return 1, 'out', 'ERROR OUTPUT'
 
     class Runner(Command):
-        cmd = 'command'
+        cmd = 'command with args'
 
         def run(self, *args, **kwargs):
            self.cmd()
 
-        @error_handler(cmd, 'ERROR OUTPUT')
-        def handle_some_error(self):
+        @error_handler('command', 'ERROR OUTPUT')
+        def handle_some_error(self, error):
             assert isinstance(self, Runner)
             command_flow.append('handle_some_error')
             return True
