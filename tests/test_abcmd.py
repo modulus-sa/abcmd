@@ -101,14 +101,9 @@ def test_CommandFormatter_on_config_change():
 
 def test_Command_init_arguments():
     class Runner(Command):
-        def dont_run(self):
-            return False
-
         def run(self):
             pass
 
-        def handle_error(self, err):
-            pass
 
     with pytest.raises(TypeError) as err:
         Runner()
@@ -120,14 +115,8 @@ def test_Command_run():
     call_list = []
 
     class Runner(Command):
-        def dont_run(self):
-            return False
-
         def run(self, *args, **kwargs):
             call_list.append('run')
-
-        def handle_error(self, err):
-            pass
 
     runner = Runner({})
 
@@ -142,12 +131,6 @@ def test_Command_creates_callables_and_proper_naming():
         template1 = 'command two'
 
         def run(self):
-            pass
-
-        def handle_error(self):
-            pass
-
-        def dont_run(self):
             pass
 
     runner = Runner({})
@@ -166,14 +149,8 @@ def test_Command_run_templates(mocker, run_cmd):
     class Runner(Command):
         template = 'command template {-o OPT}'
 
-        def dont_run(self):
-            return False
-
         def run(self, *args, **kwargs):
             self.template()
-
-        def handle_error(self, err):
-            pass
 
     runner = Runner({'OPT': 'argument'}, runner=run_cmd)
     runner()
@@ -186,14 +163,11 @@ def test_Command_dont_run_prevents_calling_run():
     call_list = []
 
     class Runner(Command):
-        def dont_run(self):
-            return True
-
         def run(self):
             call_list.append('run')
 
-        def handle_error(self, err):
-            pass
+        def dont_run(self):
+            return True
 
     runner = Runner({})
     runner()
@@ -206,9 +180,6 @@ def test_Command_calls_handle_error_on_subprocess_error():
 
     class Runner(Command):
         cat = 'cat NON_EXISTING_FILE'
-
-        def dont_run(self):
-            return False
 
         def run(self, *args, **kwargs):
             self.cat()
@@ -232,9 +203,6 @@ def test_Command_stops_if_handle_error_returns_False():
         echo = 'echo HEY'
         cat = 'cat NON_EXISTING_FILE'
 
-        def dont_run(self):
-            return False
-
         def run(self, *args, **kwargs):
             self.echo()
             handle_list.append('echo')
@@ -257,13 +225,7 @@ def test_Command_caches_templated_functions():
     class Runner(Command):
         echo = 'echo HEY'
 
-        def dont_run(self):
-            return False
-
         def run(self):
-            pass
-
-        def handle_error(self, *args):
             pass
 
     runner = Runner({})
@@ -285,14 +247,8 @@ def test_Command_on_config_change_clears_caches():
     class Runner(Command):
         command = 'command {OPTION}'
 
-        def dont_run(self):
-            return False
-
         def run(self):
             self.command()
-
-        def handle_error(self, *args):
-            pass
 
     runner = Runner({'OPTION': 'option'}, runner=run)
     runner()
@@ -315,13 +271,7 @@ def test_Command_runs_run_before_and_run_after_if_they_are_defined():
         def after_run(self):
             command_stream.append('after')
 
-        def dont_run(self):
-            return False
-
         def run(self):
-            pass
-
-        def handle_error(self, *args):
             pass
 
     runner = Runner({})
@@ -339,12 +289,6 @@ def test_Command_subclassing_keeps_templates_from_all_parent_classes():
         def run(self):
             pass
 
-        def dont_run(self):
-            pass
-
-        def handle_error(self):
-            pass
-
     class SecondRunner(FirstRunner):
         command_second = 'second'
         command_overwrite = 'second overwrite'
@@ -360,21 +304,13 @@ def test_Command_instantiated_more_times(run_cmd):
     class Runner(Command):
         template = 'command template {-o OPT}'
 
-        def dont_run(self):
-            return False
-
         def run(self, *args, **kwargs):
             self.template()
-
-        def handle_error(self, err):
-            pass
 
     runner0 = Runner({'OPT': 'argument'}, runner=run_cmd)
     runner0()
 
-
     run_cmd.assert_called_with('command template -o argument')
-
 
     runner1 = Runner({'OPT': 'argument'}, runner=run_cmd)
     runner1()
@@ -392,14 +328,8 @@ def test_Command_subclassing_with_overwriting_templates_as_methods_and_calling_s
     class Runner(Command):
         template = 'command {OPTION}'
 
-        def dont_run(self):
-            return False
-
         def run(self, *args, **kwargs):
             self.template()
-
-        def handle_error(self, err):
-            pass
 
     class SubRunner(Runner):
         def template(self):
@@ -430,9 +360,6 @@ def test_error_handler_decorator():
 
         def run(self, *args, **kwargs):
            self.cmd()
-
-        def dont_run(self, *args, **kwargs):
-            ...
 
         @error_handler(cmd, 'ERROR OUTPUT')
         def handle_some_error(self):

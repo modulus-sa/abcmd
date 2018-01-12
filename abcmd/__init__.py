@@ -122,8 +122,6 @@ class CommandRunner:
         self.template = template
 
     def __call__(self, *args, **kwargs):
-        if self.instance.dry_run:
-            return ''
         command = self.instance._formatter(self.template)
         rc, out, err = self.instance._runner(command)
         if rc != 0:
@@ -180,11 +178,10 @@ class MetaCommand(abc.ABCMeta):
 class Command(metaclass=MetaCommand):
     """Base class of all command runners.
 
-    Subclassing this ABC provides the following features:
+    Subclassing provides the following features:
 
-        - A command template format string defined at the class level
-          is formatted and run by invoking an attribute with the 
-          template name, for example::
+        - A string defined at the class level is formatted and run by calling
+          the attribute, for example::
 
               .. code:: python
 
@@ -194,20 +191,38 @@ class Command(metaclass=MetaCommand):
                   mycmd = MyCommand({'name': 'world'})
                   mycmd.greet()
 
-        - Template formatting uses the provided configuration
+          Formatting uses the provided configuration
           on initiation, in the above example the command
           will be formatted to ``echo hello world``
+
+      - The following methods are optional and implementing them will
+        provider additional functionality
+
+            - ``self.dont_run`` will be called before ``self.run`` and if
+              the returning value is truthy it will cancel the procedure
+
+            - ``self.before_run`` and ``self.after_run`` are called
+              before and after the ``self.run`` method respectively
+
+            - ``self.handle_error`` will be called on any errors that
+              have not been handled by methods decorated by the
+              ``error_handler`` decorator, return a falsy value will make
+              the procedure stop
+
+      - Decorating a method with the ``error_handler`` decorator
+        will call that method on any matching errors, returing a
+        falsy value will make the procedure stop
+
+
     """
     def __init__(self, config: Mapping, *, runner: Callable = None) -> None:
         self._config = config
         self._runner = runner if runner is not None else _run_cmd
         self._formatter = CommandFormatter(self._config)
-        self.dry_run = False
 
-    def __call__(self, *args: Any, dry_run: bool = False, **kwargs: Any) -> None:
+    def __call__(self, *args: Any, **kwargs: Any) -> None:
         """Run the procedure."""
-        self.dry_run = dry_run
-        if self.dont_run():
+        if hasattr(self, 'dont_run') and self.dont_run():
             return
 
         if hasattr(self, 'before_run'):
@@ -226,12 +241,6 @@ class Command(metaclass=MetaCommand):
     @abc.abstractmethod
     def run(self, *args: Any, **kwargs: Any) -> None:
         """Describe the procedure."""
-
-    @abc.abstractmethod
-    def dont_run(self) -> bool:
-        """Return True to cancel running.
-        This is called before run."""
-
 
 def _run_cmd(cmd: str) -> str:
     command = shlex.split(cmd)
