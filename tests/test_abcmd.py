@@ -349,7 +349,34 @@ def test_Command_subclassing_with_overwriting_templates_as_methods_and_calling_s
                               'subrunner template end']
 
 
-def test_error_handler_decorator():
+
+@pytest.mark.parametrize('args, kwargs, expected', (
+    (('cmd', 'err'), {},
+     {'command': 'cmd', 'error': 'err', 'rc': None}),
+
+    (('cmd', 'err', 1), {},
+     {'command': 'cmd', 'error': 'err', 'rc': 1}),
+
+    ((), {'command': 'cmd', 'error': 'err', 'rc':1},
+     {'command': 'cmd', 'error': 'err', 'rc': 1}),
+
+    (('cmd',), {},
+     {'command': 'cmd', 'error':None, 'rc':None}),
+
+    ((), {'error': 'err'},
+     {'command': None, 'error': 'err', 'rc':None})
+))
+def test_error_handler_decorator_arguments(args, kwargs, expected):
+    @error_handler(*args, **kwargs)
+    def handler(error):
+        ...
+
+    attrs =  getattr(handler, '_handler', None)
+
+    assert attrs == expected
+
+
+def test_error_handler_decorator_runs():
     command_flow = []
 
     def run(cmd):
@@ -371,6 +398,44 @@ def test_error_handler_decorator():
     runner()
 
     assert command_flow
+
+
+def test_CommandRunner_get_error_handlers():
+    class Runner(Command):
+        cmd = 'command with args'
+
+        def run(self, *args, **kwargs):
+           self.cmd()
+
+        @error_handler('command0', 'error0')
+        def handler0(self, error):
+            ...
+
+        @error_handler('command1', 'error1')
+        def handler1(self, error):
+            ...
+
+        @error_handler('command1')
+        def handler2(self, error):
+            ...
+
+        @error_handler(rc=10)
+        def handler3(self, error):
+            ...
+
+    runner = Runner({})
+
+    handlers = runner.cmd.get_error_handlers('command0', 'error0', 1)
+    assert handlers == [Runner.handler0]
+
+    handlers = runner.cmd.get_error_handlers('command1', 'error1', 1)
+    assert handlers == [Runner.handler1, Runner.handler2]
+
+    handlers = runner.cmd.get_error_handlers('command1', 'error1', 10)
+    assert handlers == [Runner.handler1, Runner.handler2, Runner.handler3]
+
+    handlers = runner.cmd.get_error_handlers('command3', 'error3', 10)
+    assert handlers == [Runner.handler3]
 
 
 def test_subclass_inherits_error_handler_decorated_methods():

@@ -125,11 +125,11 @@ class CommandRunner:
         command = self.instance._formatter(self.template)
         rc, out, err = self.instance._runner(command)
         if rc != 0:
-            self.handle_error(command, err)
-        return out, err
+            self.handle_error(command, err, rc)
+        return out, err, rc
 
-    def handle_error(self, command, error):
-        handlers = self.get_error_handlers(command, error)
+    def handle_error(self, command, error, rc):
+        handlers = self.get_error_handlers(command, error, rc)
 
         if handlers:
             for handler in handlers:
@@ -145,14 +145,21 @@ class CommandRunner:
         logging.error('Unhandled error: ' + msg)
         raise sp.SubprocessError(msg)
 
-    def get_error_handlers(self, command, error):
+    def get_error_handlers(self, command, error, rc):
         return [handler for handler in self.instance._handlers
-                if self.is_matching_handler(handler, command, error)]
+                if self.is_matching_handler(handler, command, error, rc)]
 
-    def is_matching_handler(self, handler, command, error):
-        command_matches = bool(re.search(handler._handler['command'], command))
-        error_matches = bool(re.search(handler._handler['error'], error))
-        return command_matches and error_matches
+    def is_matching_handler(self, handler, command, error, rc):
+        command_pattern = handler._handler['command']
+        if command_pattern and not re.search(command_pattern, command):
+            return False
+        error_pattern = handler._handler['error']
+        if error_pattern and not re.search(error_pattern, error):
+            return False
+        rc_pattern = handler._handler['rc']
+        if rc_pattern and rc_pattern != rc:
+            return False
+        return True
 
     def __repr__(self):
         return '{} runner at {}'.format(self.__name__, id(self))
@@ -265,7 +272,7 @@ def _run_cmd(cmd: str) -> str:
     return (proc.returncode, out, error)
 
 
-def error_handler(command, error):
+def error_handler(command=None, error=None, rc=None):
     """Method decorator for handling specific errors.
     First argument is command to match too, the second argument
     is a regular expression to match the error."""
@@ -275,7 +282,8 @@ def error_handler(command, error):
             return func(self, *args, **kwargs)
 
         handler._handler = {'command': command,
-                            'error': error}
+                            'error': error,
+                            'rc': rc}
         return handler
 
     return wrapper
