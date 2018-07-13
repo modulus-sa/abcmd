@@ -428,20 +428,23 @@ def test_CommandRunner_get_error_handlers():
 
     command.command, command.error, command.rc = ('command0', 'error0', 1)
     handlers = command.get_error_handlers()
-    assert handlers == [Runner.handler0]
+    expected_handlers = [Runner.handler0]
+    assert sorted(handlers, key=str) == sorted(expected_handlers, key=str)
 
     command.command, command.error, command.rc = ('command1', 'error1', 1)
     handlers = command.get_error_handlers()
-    assert handlers == [Runner.handler1, Runner.handler2]
+    expected_handlers = [Runner.handler1, Runner.handler2]
+    assert sorted(handlers, key=str) == sorted(expected_handlers, key=str)
 
     command.command, command.error, command.rc = ('command1', 'error1', 10)
     handlers = command.get_error_handlers()
-    assert handlers == [Runner.handler1, Runner.handler2, Runner.handler3]
+    expected_handlers = [Runner.handler1, Runner.handler2, Runner.handler3] 
+    assert sorted(handlers, key=str) == sorted(expected_handlers, key=str)
 
     command.command, command.error, command.rc = ('command3', 'error3', 10)
     handlers = command.get_error_handlers()
-    assert handlers == [Runner.handler3]
-
+    expected_handlers = [Runner.handler3]
+    assert sorted(handlers, key=str) == sorted(expected_handlers, key=str)
 
 def test_subclass_inherits_error_handler_decorated_methods():
     command_flow = []
