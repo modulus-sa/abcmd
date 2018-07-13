@@ -103,61 +103,61 @@ class CommandSpec:
         self.template = template
         self.runners = {}
 
-    def __get__(self, instance, cls):
-        if not instance:
+    def __get__(self, cmd_obj, cls):
+        if not cmd_obj:
             return self
-        if instance in self.runners:
-            return self.runners[instance]
+        if cmd_obj in self.runners:
+            return self.runners[cmd_obj]
 
-        runner = CommandRunner(self.name, instance, self.template)
-        self.runners[instance] = runner
+        runner = CommandRunner(self.name, cmd_obj, self.template)
+        self.runners[cmd_obj] = runner
         return runner
 
 
 class CommandRunner:
 
-    def __init__(self, name, instance, template):
+    def __init__(self, name, cmd_obj, template):
         self.__name__ = name
-        self.instance = instance
+        self.cmd_obj = cmd_obj
         self.template = template
 
     def __call__(self, *args, **kwargs):
-        command = self.instance._formatter(self.template)
-        rc, out, err = self.instance._runner(command)
-        if rc != 0:
-            self.handle_error(command, err, rc)
-        return out, err, rc
+        self.command = self.cmd_obj._formatter(self.template)
+        self.rc, self.output, self.error = self.cmd_obj._runner(self.command)
+        if self.rc != 0:
+            self.handle_error()
+        return self.output, self.error, self.rc
 
-    def handle_error(self, command, error, rc):
-        handlers = self.get_error_handlers(command, error, rc)
+    def handle_error(self):
+        handlers = self.get_error_handlers()
 
         if handlers:
             for handler in handlers:
-                if not handler(self.instance, error):
+                if not handler(self.cmd_obj, self.error):
                     break
             else:
                 return
-        elif hasattr(self.instance, 'handle_error'):
-            if self.instance.handle_error(command, error):
+        elif hasattr(self.cmd_obj, 'handle_error'):
+            if self.cmd_obj.handle_error(self.command, self.error):
                 return
 
-        msg = '{}: {}'.format(command, error)
+        msg = '{}: {}'.format(self.command, self.error)
         logging.error('Unhandled error: ' + msg)
         raise sp.SubprocessError(msg)
 
-    def get_error_handlers(self, command, error, rc):
-        return [handler for handler in self.instance._handlers
-                if self.is_matching_handler(handler, command, error, rc)]
+    def get_error_handlers(self):
+        return [handler for handler in self.cmd_obj._handlers
+                if self.is_matching_handler(handler)]
 
-    def is_matching_handler(self, handler, command, error, rc):
+    def is_matching_handler(self, handler):
         command_pattern = handler._handler['command']
-        if command_pattern and not re.search(command_pattern, command):
+        if command_pattern and not re.search(command_pattern, self.command):
             return False
         error_pattern = handler._handler['error']
-        if error_pattern and not re.search(error_pattern, error):
+        if error_pattern and not re.search(error_pattern, self.error):
             return False
         rc_pattern = handler._handler['rc']
-        if rc_pattern and rc_pattern != rc:
+        if rc_pattern and rc_pattern != self.rc:
             return False
         return True
 

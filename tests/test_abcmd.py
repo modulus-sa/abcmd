@@ -402,10 +402,10 @@ def test_error_handler_decorator_runs():
 
 def test_CommandRunner_get_error_handlers():
     class Runner(Command):
-        cmd = 'command with args'
+        command = 'command with args'
 
         def run(self, *args, **kwargs):
-           self.cmd()
+           self.command()
 
         @error_handler('command0', 'error0')
         def handler0(self, error):
@@ -424,17 +424,22 @@ def test_CommandRunner_get_error_handlers():
             ...
 
     runner = Runner({})
+    command = runner.command
 
-    handlers = runner.cmd.get_error_handlers('command0', 'error0', 1)
+    command.command, command.error, command.rc = ('command0', 'error0', 1)
+    handlers = command.get_error_handlers()
     assert handlers == [Runner.handler0]
 
-    handlers = runner.cmd.get_error_handlers('command1', 'error1', 1)
+    command.command, command.error, command.rc = ('command1', 'error1', 1)
+    handlers = command.get_error_handlers()
     assert handlers == [Runner.handler1, Runner.handler2]
 
-    handlers = runner.cmd.get_error_handlers('command1', 'error1', 10)
+    command.command, command.error, command.rc = ('command1', 'error1', 10)
+    handlers = command.get_error_handlers()
     assert handlers == [Runner.handler1, Runner.handler2, Runner.handler3]
 
-    handlers = runner.cmd.get_error_handlers('command3', 'error3', 10)
+    command.command, command.error, command.rc = ('command3', 'error3', 10)
+    handlers = command.get_error_handlers()
     assert handlers == [Runner.handler3]
 
 
