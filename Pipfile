@@ -6,7 +6,6 @@ verify_ssl = true
 toml = "*"
 
 [dev-packages]
-
 pytest = "*"
 "pytest-watch" = "*"
 mypy = "*"
@@ -15,3 +14,4 @@ twine = "*"
 "pytest-mypy" = "*"
 "pytest-cov" = "*"
 codecov = "*"
+pyyaml = ">=4.2b1"
