@@ -1,7 +1,7 @@
 """abcmd - ABCs & Mixins for wrapping commands with static configuration."""
 
 __version__ = '0.4.0'
-__author__ = 'Konstantinos Tsakiltzidis <laerusk@gmail.com>'
+__author__ = 'Konstantinos Tsakiltzidis <ktsakiltzidis@modulus.gr>'
 __all__ = ('Command',)
 
 
