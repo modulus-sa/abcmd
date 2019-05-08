@@ -1,4 +1,4 @@
-from abcmd import Command
+from abcmd import Command, Process
 
 import pytest
 
@@ -54,7 +54,7 @@ def test_Command_creates_callables_and_proper_naming():
     assert str(command.attribute1) == 'command two'
 
 
-def test_Command_run_attributes(mocker, run_cmd):
+def test_Command_call_attributes(run_cmd):
 
     class MyCommand(Command):
         attribute = 'command attribute {-o OPT}'
@@ -67,6 +67,25 @@ def test_Command_run_attributes(mocker, run_cmd):
 
     assert command.attribute.name == 'attribute'
     run_cmd.assert_called_with('command attribute -o argument')
+
+
+def test_Command_calling_attributes_returns_Process():
+    def run(cmd):
+        return 0, 'out', 'err'
+
+    class MyCommand(Command):
+        attribute = 'command attribute'
+
+        def run(self, *args, **kwargs):
+            self.attribute()
+
+    command = MyCommand({}, runner=run)
+    proc = command.attribute()
+
+    assert isinstance(proc, Process)
+    assert proc.output == 'out'
+    assert proc.returncode == 0
+    assert proc.error == 'err'
 
 
 def test_Command_dont_run_prevents_calling_run():
@@ -148,18 +167,18 @@ def test_Command_subclassing_keeps_attributes_from_all_parent_classes():
 
     class FirstRunner(Command):
         command_first = 'first'
-        command_overwrite = 'first overwrite'
+        command_override = 'first override'
 
         def run(self):
             pass
 
     class SecondRunner(FirstRunner):
         command_second = 'second'
-        command_overwrite = 'second overwrite'
+        command_override = 'second override'
 
     command = SecondRunner({})
 
-    attrs = ('command_first', 'command_second', 'command_overwrite')
+    attrs = ('command_first', 'command_second', 'command_override')
     for attr in attrs:
         assert callable(getattr(command, attr))
 
@@ -182,7 +201,7 @@ def test_Command_instantiated_more_times(run_cmd):
     run_cmd.assert_called_with('command attribute -o argument')
 
 
-def test_Command_subclassing_with_overwriting_attributes_as_methods_and_calling_super():
+def test_Command_subclassing_with_override_attributes_as_methods_and_calling_super():
     command_stream = []
 
     def run(cmd):

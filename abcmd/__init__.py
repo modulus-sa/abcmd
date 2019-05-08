@@ -109,12 +109,12 @@ class CommandDescriptor:
         if command in self.runners:
             return self.runners[command]
 
-        runner = CommandField(self.name, command, self.template)
+        runner = Process(self.name, command, self.template)
         self.runners[command] = runner
         return runner
 
 
-class CommandField:
+class Process:
 
     def __init__(self, name, command, template):
         self.name = name
@@ -122,10 +122,10 @@ class CommandField:
         self.template = template
 
     def __call__(self, *args, **kwargs):
-        self.rc, self.output, self.error = self.command._runner(str(self))
-        if self.rc != 0:
+        self.returncode, self.output, self.error = self.command._runner(str(self))
+        if self.returncode != 0:
             self.handle_error()
-        return self.output, self.error, self.rc
+        return self
 
     def __str__(self):
         self._formatted_command = self.command._formatter(self.template)
@@ -160,7 +160,7 @@ class CommandField:
         if error_pattern and not re.search(error_pattern, self.error):
             return False
         rc_pattern = handler._handler['rc']
-        if rc_pattern and rc_pattern != self.rc:
+        if rc_pattern and rc_pattern != self.returncode:
             return False
         return True
 

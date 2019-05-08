@@ -101,7 +101,19 @@ def test_error_handler_decorator_runs():
     assert command_flow
 
 
-def test_CommandRunner_get_error_handlers():
+@pytest.mark.parametrize('rc, error, expected_handlers', [
+    (1, 'error0', ['handler0', 'handler2']),
+    (1, 'error1', ['handler1', 'handler2']),
+    (10, 'error', ['handler2', 'handler3']),
+    (10, 'error1', ['handler1', 'handler2', 'handler3']),
+
+])
+def test_CommandRunner_error_handlers(rc, error, expected_handlers):
+    handlers = []
+
+    def run(cmd):
+        return rc, 'out', error
+
     class MyCommand(Command):
         command = 'command with args'
 
@@ -110,41 +122,27 @@ def test_CommandRunner_get_error_handlers():
 
         @error_handler('command', 'error0')
         def handler0(self, error):
-            ...
+            handlers.append('handler0')
+            return True
 
         @error_handler('command', 'error1')
         def handler1(self, error):
-            ...
+            handlers.append('handler1')
+            return True
 
         @error_handler('command')
         def handler2(self, error):
-            ...
+            handlers.append('handler2')
+            return True
 
         @error_handler(rc=10)
         def handler3(self, error):
-            ...
+            handlers.append('handler3')
+            return True
 
-    runner = MyCommand({})
-    command = runner.command
+    runner = MyCommand({}, runner=run)
+    runner()
 
-    command.error, command.rc = ('error0', 1)
-    handlers = command.get_error_handlers()
-    expected_handlers = [MyCommand.handler0, MyCommand.handler2]
-    assert sorted(handlers, key=str) == sorted(expected_handlers, key=str)
-
-    command.error, command.rc = ('error1', 1)
-    handlers = command.get_error_handlers()
-    expected_handlers = [MyCommand.handler1, MyCommand.handler2]
-    assert sorted(handlers, key=str) == sorted(expected_handlers, key=str)
-
-    command.error, command.rc = ('error', 10)
-    handlers = command.get_error_handlers()
-    expected_handlers = [MyCommand.handler2, MyCommand.handler3]
-    assert sorted(handlers, key=str) == sorted(expected_handlers, key=str)
-
-    command.error, command.rc = ('error1', 10)
-    handlers = command.get_error_handlers()
-    expected_handlers = [MyCommand.handler1, MyCommand.handler2, MyCommand.handler3]
     assert sorted(handlers, key=str) == sorted(expected_handlers, key=str)
 
 
