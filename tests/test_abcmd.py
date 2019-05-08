@@ -1,6 +1,4 @@
-import subprocess as sp
-
-from abcmd import CommandFormatter, Command, error_handler
+from abcmd import Command
 
 import pytest
 
@@ -8,94 +6,6 @@ import pytest
 @pytest.fixture()
 def run_cmd(mocker):
     return mocker.Mock(return_value=(0, 'out', 'err'))
-
-
-@pytest.mark.parametrize('template, config, expected', [
-    ('cmd {option0}', {'option0': 'test_option'}, 'cmd test_option'),
-    # list parameter must be separated with spaces
-    ('command {option0}::{option1} {option2}',
-     {'option0': 'test_option', 'option1': 'test_option1', 'option2': ['path0', 'path1']},
-     'command test_option::test_option1 path0 path1'),
-    # boolean parameter must exist if true
-    ('command {option0}::{option1} {option2} {verbose}',
-     {'option0': 'test_option', 'option1': 'test_option1',
-      'option2': ['test_path'], 'verbose': True},
-     'command test_option::test_option1 test_path --verbose'),
-    # boolean parameter has right name
-    ('command {option0}::{option1} {option2} {bool_option}',
-     {'option0': 'test_option', 'option1': 'test_option1',
-      'option2': ['test_path'], 'bool_option': True},
-     'command test_option::test_option1 test_path --bool-option'),
-    # boolean parameter must not exist if false
-    ('command {option0}::{option1} {option2} {verbose}',
-     {'option0': 'test_option', 'option1': 'test_option1',
-      'option2': ['test_path'], 'verbose': False},
-     'command test_option::test_option1 test_path'),
-    # optional non boolean parameter
-    ('init {option0} {-e option1}',
-     {'option0': 'test_option', 'option1': 'keyfile'},
-     'init test_option -e keyfile'),
-    # positional list parameter
-    ('command {args}',
-     {'args': [1, 2, 3, 4]},
-     'command 1 2 3 4'),
-    # optional non boolean list parameter
-    ('command {option0}::{option1} {option2} {-e list_option}',
-     {'option0': 'test_option', 'option1': 'test_option1',
-      'option2': ['test_path'], 'list_option': ['/list_option0', '/list_option1']},
-     'command test_option::test_option1 test_path -e /list_option0 -e /list_option1'),
-    # optional non boolean empty list parameter
-    ('command {option0}::{option1} {option2} {-e list_option}',
-     {'option0': 'test_option', 'option1': 'test_option1',
-      'option2': ['test_path'], 'list_option': []},
-     'command test_option::test_option1 test_path'),
-    # optional non boolean empty string parameter
-    ('command {option0}::{option1} {option2} {-c empty_option}',
-     {'option0': 'test_option', 'option1': 'test_option1',
-      'option2': ['test_path'], 'empty_option': ''},
-     'command test_option::test_option1 test_path'),
-    # handle int parameters
-    ('command {-h keep_hourly}',
-     {'keep_hourly': 1},
-     'command -h 1'),
-    # handle "0" as a non falsy value
-    ('command {-o arg}',
-     {'arg': 0},
-     'command -o 0'),
-    # long parameters
-    ('command {--long long_option}',
-     {'long_option': 1},
-     'command --long 1'),
-    # long parameters list
-    ('command {--long long_option}',
-     {'long_option': [1, 2, 3]},
-     'command --long 1 --long 2 --long 3'),
-    # ingore extra args in format field
-    ('command {-o option option2}',
-     {'option': 'opt'},
-     'command -o opt'),
-    # positional argument
-    ('command {ARG}', {'ARG': 10}, 'command 10'),
-])
-def test_CommandFormatter_format(config, template, expected):
-    formatter = CommandFormatter(config=config)
-    assert formatter(template) == expected
-
-
-def test_CommandFormatter_caches_commands():
-    formatter = CommandFormatter({'OPTION': 'option'})
-    first_formatted = formatter('command {-o OPTION}')
-    second_formatted = formatter('command {-o OPTION}')
-
-    assert first_formatted is second_formatted
-
-
-def test_CommandFormatter_on_config_change():
-    formatter = CommandFormatter({'OPTION': 'option'})
-    assert formatter('command {OPTION}') == 'command option'
-
-    formatter.config['OPTION'] = 'changed'
-    assert formatter('command {OPTION}') == 'command changed'
 
 
 def test_Command_init_arguments():
@@ -134,11 +44,11 @@ def test_Command_creates_callables_and_proper_naming():
     runner = Runner({})
 
     assert (callable(runner.template0)
-            and runner.template0.__name__ == 'template0'
+            and runner.template0.name == 'template0'
             and str(runner.template0).startswith('template0 runner'))
 
     assert (callable(runner.template1)
-            and runner.template1.__name__ == 'template1'
+            and runner.template1.name == 'template1'
             and str(runner.template1).startswith('template1 runner'))
 
 
@@ -153,7 +63,7 @@ def test_Command_run_templates(mocker, run_cmd):
     runner = Runner({'OPT': 'argument'}, runner=run_cmd)
     runner()
 
-    assert runner.template.__name__ == 'template'
+    assert runner.template.name == 'template'
     run_cmd.assert_called_with('command template -o argument')
 
 
@@ -171,52 +81,6 @@ def test_Command_dont_run_prevents_calling_run():
     runner()
 
     assert call_list == []
-
-
-def test_Command_calls_handle_error_on_subprocess_error():
-    handle_list = []
-
-    class Runner(Command):
-        cat = 'cat NON_EXISTING_FILE'
-
-        def run(self, *args, **kwargs):
-            self.cat()
-
-        def handle_error(self, cmd, error):
-            handle_list.append(cmd)
-            handle_list.append(error)
-            return True
-
-    runner = Runner({})
-    runner()
-
-    assert handle_list == ['cat NON_EXISTING_FILE',
-                           'cat: NON_EXISTING_FILE: No such file or directory\n']
-
-
-def test_Command_stops_if_handle_error_returns_False():
-    handle_list = []
-
-    class Runner(Command):
-        echo = 'echo HEY'
-        cat = 'cat NON_EXISTING_FILE'
-
-        def run(self, *args, **kwargs):
-            self.echo()
-            handle_list.append('echo')
-            self.cat()
-            handle_list.append('cat')
-            self.echo()
-            handle_list.append('echo')
-
-        def handle_error(self, cmd, error):
-            return False
-
-    runner = Runner({})
-    with pytest.raises(sp.SubprocessError):
-        runner()
-
-    assert handle_list == ['echo']
 
 
 def test_Command_caches_templated_functions():
@@ -345,131 +209,3 @@ def test_Command_subclassing_with_overwriting_templates_as_methods_and_calling_s
                               'subrunner template start',
                               'command OK',
                               'subrunner template end']
-
-
-@pytest.mark.parametrize('args, kwargs, expected', (
-    (('cmd', 'err'), {},
-     {'command': 'cmd', 'error': 'err', 'rc': None}),
-
-    (('cmd', 'err', 1), {},
-     {'command': 'cmd', 'error': 'err', 'rc': 1}),
-
-    ((), {'command': 'cmd', 'error': 'err', 'rc': 1},
-     {'command': 'cmd', 'error': 'err', 'rc': 1}),
-
-    (('cmd',), {},
-     {'command': 'cmd', 'error': None, 'rc': None}),
-
-    ((), {'error': 'err'},
-     {'command': None, 'error': 'err', 'rc': None})
-))
-def test_error_handler_decorator_arguments(args, kwargs, expected):
-    @error_handler(*args, **kwargs)
-    def handler(error):
-        ...
-
-    attrs = getattr(handler, '_handler', None)
-
-    assert attrs == expected
-
-
-def test_error_handler_decorator_runs():
-    command_flow = []
-
-    def run(cmd):
-        return 1, 'out', 'ERROR OUTPUT'
-
-    class Runner(Command):
-        cmd = 'command with args'
-
-        def run(self, *args, **kwargs):
-            self.cmd()
-
-        @error_handler('command', 'ERROR OUTPUT')
-        def handle_some_error(self, error):
-            assert isinstance(self, Runner)
-            command_flow.append('handle_some_error')
-            return True
-
-    runner = Runner({}, runner=run)
-    runner()
-
-    assert command_flow
-
-
-def test_CommandRunner_get_error_handlers():
-    class Runner(Command):
-        command = 'command with args'
-
-        def run(self, *args, **kwargs):
-            self.command()
-
-        @error_handler('command0', 'error0')
-        def handler0(self, error):
-            ...
-
-        @error_handler('command1', 'error1')
-        def handler1(self, error):
-            ...
-
-        @error_handler('command1')
-        def handler2(self, error):
-            ...
-
-        @error_handler(rc=10)
-        def handler3(self, error):
-            ...
-
-    runner = Runner({})
-    command = runner.command
-
-    command.command, command.error, command.rc = ('command0', 'error0', 1)
-    handlers = command.get_error_handlers()
-    expected_handlers = [Runner.handler0]
-    assert sorted(handlers, key=str) == sorted(expected_handlers, key=str)
-
-    command.command, command.error, command.rc = ('command1', 'error1', 1)
-    handlers = command.get_error_handlers()
-    expected_handlers = [Runner.handler1, Runner.handler2]
-    assert sorted(handlers, key=str) == sorted(expected_handlers, key=str)
-
-    command.command, command.error, command.rc = ('command1', 'error1', 10)
-    handlers = command.get_error_handlers()
-    expected_handlers = [Runner.handler1, Runner.handler2, Runner.handler3]
-    assert sorted(handlers, key=str) == sorted(expected_handlers, key=str)
-
-    command.command, command.error, command.rc = ('command3', 'error3', 10)
-    handlers = command.get_error_handlers()
-    expected_handlers = [Runner.handler3]
-    assert sorted(handlers, key=str) == sorted(expected_handlers, key=str)
-
-
-def test_subclass_inherits_error_handler_decorated_methods():
-    command_flow = []
-
-    def run(cmd):
-        return 1, 'out', 'ERROR OUTPUT WITH MORE INFO'
-
-    class Runner(Command):
-        cmd = 'command with args'
-
-        def run(self, *args, **kwargs):
-            self.cmd()
-
-        @error_handler('command', 'ERROR OUTPUT .*')
-        def handle_some_error(self, error):
-            assert isinstance(self, Runner)
-            command_flow.append('handle_some_error')
-            return True
-
-    class SubRunner(Runner):
-        @error_handler('^command', 'ERROR OUTPUT .*')
-        def another_error_handler(self, error):
-            command_flow.append('another_error_handler')
-            return True
-
-    runner = SubRunner({}, runner=run)
-    runner()
-
-    assert ('handle_some_error' in command_flow
-            and 'another_error_handler' in command_flow)

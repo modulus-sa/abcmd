@@ -10,7 +10,7 @@ import re
 import shlex
 import subprocess as sp
 import sys
-from functools import lru_cache, wraps
+from functools import lru_cache
 from string import Formatter
 import logging
 
@@ -117,7 +117,7 @@ class CommandSpec:
 class CommandRunner:
 
     def __init__(self, name, cmd_obj, template):
-        self.__name__ = name
+        self.name = name
         self.cmd_obj = cmd_obj
         self.template = template
 
@@ -150,8 +150,8 @@ class CommandRunner:
                 if self.is_matching_handler(handler)]
 
     def is_matching_handler(self, handler):
-        command_pattern = handler._handler['command']
-        if command_pattern and not re.search(command_pattern, self.command):
+        command_name = handler._handler['command']
+        if command_name and self.name != command_name:
             return False
         error_pattern = handler._handler['error']
         if error_pattern and not re.search(error_pattern, self.error):
@@ -162,7 +162,7 @@ class CommandRunner:
         return True
 
     def __repr__(self):
-        return '{} runner at {}'.format(self.__name__, id(self))
+        return '{} runner at {}'.format(self.name, id(self))
 
 
 class MetaCommand(abc.ABCMeta):
@@ -278,13 +278,9 @@ def error_handler(command=None, error=None, rc=None):
     First argument is command to match too, the second argument
     is a regular expression to match the error."""
     def wrapper(func):
-        @wraps(func)
-        def handler(self, *args, **kwargs):
-            return func(self, *args, **kwargs)
-
-        handler._handler = {'command': command,
-                            'error': error,
-                            'rc': rc}
-        return handler
+        func._handler = {'command': command,
+                         'error': error,
+                         'rc': rc}
+        return func
 
     return wrapper
