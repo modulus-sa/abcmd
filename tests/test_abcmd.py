@@ -1,6 +1,5 @@
 import subprocess as sp
 
-import abcmd
 from abcmd import CommandFormatter, Command, error_handler
 
 import pytest
@@ -103,7 +102,6 @@ def test_Command_init_arguments():
     class Runner(Command):
         def run(self):
             pass
-
 
     with pytest.raises(TypeError) as err:
         Runner()
@@ -349,7 +347,6 @@ def test_Command_subclassing_with_overwriting_templates_as_methods_and_calling_s
                               'subrunner template end']
 
 
-
 @pytest.mark.parametrize('args, kwargs, expected', (
     (('cmd', 'err'), {},
      {'command': 'cmd', 'error': 'err', 'rc': None}),
@@ -357,21 +354,21 @@ def test_Command_subclassing_with_overwriting_templates_as_methods_and_calling_s
     (('cmd', 'err', 1), {},
      {'command': 'cmd', 'error': 'err', 'rc': 1}),
 
-    ((), {'command': 'cmd', 'error': 'err', 'rc':1},
+    ((), {'command': 'cmd', 'error': 'err', 'rc': 1},
      {'command': 'cmd', 'error': 'err', 'rc': 1}),
 
     (('cmd',), {},
-     {'command': 'cmd', 'error':None, 'rc':None}),
+     {'command': 'cmd', 'error': None, 'rc': None}),
 
     ((), {'error': 'err'},
-     {'command': None, 'error': 'err', 'rc':None})
+     {'command': None, 'error': 'err', 'rc': None})
 ))
 def test_error_handler_decorator_arguments(args, kwargs, expected):
     @error_handler(*args, **kwargs)
     def handler(error):
         ...
 
-    attrs =  getattr(handler, '_handler', None)
+    attrs = getattr(handler, '_handler', None)
 
     assert attrs == expected
 
@@ -386,7 +383,7 @@ def test_error_handler_decorator_runs():
         cmd = 'command with args'
 
         def run(self, *args, **kwargs):
-           self.cmd()
+            self.cmd()
 
         @error_handler('command', 'ERROR OUTPUT')
         def handle_some_error(self, error):
@@ -405,7 +402,7 @@ def test_CommandRunner_get_error_handlers():
         command = 'command with args'
 
         def run(self, *args, **kwargs):
-           self.command()
+            self.command()
 
         @error_handler('command0', 'error0')
         def handler0(self, error):
@@ -438,13 +435,14 @@ def test_CommandRunner_get_error_handlers():
 
     command.command, command.error, command.rc = ('command1', 'error1', 10)
     handlers = command.get_error_handlers()
-    expected_handlers = [Runner.handler1, Runner.handler2, Runner.handler3] 
+    expected_handlers = [Runner.handler1, Runner.handler2, Runner.handler3]
     assert sorted(handlers, key=str) == sorted(expected_handlers, key=str)
 
     command.command, command.error, command.rc = ('command3', 'error3', 10)
     handlers = command.get_error_handlers()
     expected_handlers = [Runner.handler3]
     assert sorted(handlers, key=str) == sorted(expected_handlers, key=str)
+
 
 def test_subclass_inherits_error_handler_decorated_methods():
     command_flow = []
@@ -456,7 +454,7 @@ def test_subclass_inherits_error_handler_decorated_methods():
         cmd = 'command with args'
 
         def run(self, *args, **kwargs):
-           self.cmd()
+            self.cmd()
 
         @error_handler('command', 'ERROR OUTPUT .*')
         def handle_some_error(self, error):
@@ -473,5 +471,5 @@ def test_subclass_inherits_error_handler_decorated_methods():
     runner = SubRunner({}, runner=run)
     runner()
 
-    assert ('handle_some_error' in command_flow 
+    assert ('handle_some_error' in command_flow
             and 'another_error_handler' in command_flow)

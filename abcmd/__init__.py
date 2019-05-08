@@ -16,10 +16,10 @@ import logging
 
 if sys.version_info.minor < 5:
     import collections as cabc
-    from .typingstub import Any, Union, Sequence, Mapping, Callable, Dict
+    from .typingstub import Any, Union, Sequence, Mapping, Callable
 else:
     import collections.abc as cabc
-    from typing import Any, Union, Sequence, Mapping, Callable, Dict
+    from typing import Any, Union, Sequence, Mapping, Callable
 
 if sys.version_info.minor < 3:
     class SubprocessError(Exception):
@@ -56,7 +56,7 @@ class CommandFormatter(Formatter):
 
     @property
     def config(self):
-        self.__call__.cache_clear() 
+        self.__call__.cache_clear()
         return self._config
 
     @lru_cache()
@@ -252,6 +252,7 @@ class Command(metaclass=MetaCommand):
     @abc.abstractmethod
     def run(self, *args: Any, **kwargs: Any) -> None:
         """Describe the procedure."""
+
 
 def _run_cmd(cmd: str) -> str:
     command = shlex.split(cmd)
