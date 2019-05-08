@@ -9,12 +9,12 @@ def run_cmd(mocker):
 
 
 def test_Command_init_arguments():
-    class Runner(Command):
+    class MyCommand(Command):
         def run(self):
             pass
 
     with pytest.raises(TypeError) as err:
-        Runner()
+        MyCommand()
 
     assert str(err).endswith("__init__() missing 1 required positional argument: 'config'")
 
@@ -22,79 +22,81 @@ def test_Command_init_arguments():
 def test_Command_run():
     call_list = []
 
-    class Runner(Command):
+    class MyCommand(Command):
         def run(self, *args, **kwargs):
             call_list.append('run')
 
-    runner = Runner({})
+    command = MyCommand({})
 
-    runner()
+    command()
 
     assert call_list == ['run']
 
 
 def test_Command_creates_callables_and_proper_naming():
-    class Runner(Command):
-        template0 = 'command one'
-        template1 = 'command two'
+    class MyCommand(Command):
+        attribute0 = 'command one'
+        attribute1 = 'command two'
 
         def run(self):
             pass
 
-    runner = Runner({})
+    command = MyCommand({})
 
-    assert (callable(runner.template0)
-            and runner.template0.name == 'template0'
-            and str(runner.template0).startswith('template0 runner'))
+    assert callable(command.attribute0)
+    assert command.attribute0.name == 'attribute0'
+    assert repr(command.attribute0).startswith('attribute0 runner')
+    assert str(command.attribute0) == 'command one'
 
-    assert (callable(runner.template1)
-            and runner.template1.name == 'template1'
-            and str(runner.template1).startswith('template1 runner'))
+    assert callable(command.attribute1)
+    assert command.attribute1.name == 'attribute1'
+    assert repr(command.attribute1).startswith('attribute1 runner')
+    assert str(command.attribute1) == 'command two'
 
 
-def test_Command_run_templates(mocker, run_cmd):
+def test_Command_run_attributes(mocker, run_cmd):
 
-    class Runner(Command):
-        template = 'command template {-o OPT}'
+    class MyCommand(Command):
+        attribute = 'command attribute {-o OPT}'
 
         def run(self, *args, **kwargs):
-            self.template()
+            self.attribute()
 
-    runner = Runner({'OPT': 'argument'}, runner=run_cmd)
-    runner()
+    command = MyCommand({'OPT': 'argument'}, runner=run_cmd)
+    command()
 
-    assert runner.template.name == 'template'
-    run_cmd.assert_called_with('command template -o argument')
+    assert command.attribute.name == 'attribute'
+    run_cmd.assert_called_with('command attribute -o argument')
 
 
 def test_Command_dont_run_prevents_calling_run():
     call_list = []
 
-    class Runner(Command):
+    class MyCommand(Command):
         def run(self):
             call_list.append('run')
 
         def dont_run(self):
             return True
 
-    runner = Runner({})
-    runner()
+    command = MyCommand({})
+    command()
 
     assert call_list == []
 
 
-def test_Command_caches_templated_functions():
-    class Runner(Command):
+def test_Command_caches_attributed_functions():
+    class MyCommand(Command):
         echo = 'echo HEY'
 
         def run(self):
             pass
 
-    runner = Runner({})
+    command = MyCommand({})
 
-    first_function = runner.echo
-    second_function = runner.echo
-    third_function = runner.echo
+    first_function = command.echo
+    second_function = command.echo
+    third_function = command.echo
 
     assert first_function is second_function is third_function
 
@@ -106,25 +108,25 @@ def test_Command_on_config_change_clears_caches():
         command_stream.append(cmd)
         return 0, 'out', 'err'
 
-    class Runner(Command):
+    class MyCommand(Command):
         command = 'command {OPTION}'
 
         def run(self):
             self.command()
 
-    runner = Runner({'OPTION': 'option'}, runner=run)
-    runner()
+    command = MyCommand({'OPTION': 'option'}, runner=run)
+    command()
     assert command_stream.pop() == 'command option'
 
-    runner.config['OPTION'] = 'changed'
-    runner()
+    command.config['OPTION'] = 'changed'
+    command()
     assert command_stream.pop() == 'command changed'
 
 
 def test_Command_runs_run_before_and_run_after_if_they_are_defined():
     command_stream = []
 
-    class Runner(Command):
+    class MyCommand(Command):
         cmd = 'command {OPTION}'
 
         def before_run(self):
@@ -136,13 +138,13 @@ def test_Command_runs_run_before_and_run_after_if_they_are_defined():
         def run(self):
             pass
 
-    runner = Runner({})
-    runner()
+    command = MyCommand({})
+    command()
 
     assert command_stream == ['before', 'after']
 
 
-def test_Command_subclassing_keeps_templates_from_all_parent_classes():
+def test_Command_subclassing_keeps_attributes_from_all_parent_classes():
 
     class FirstRunner(Command):
         command_first = 'first'
@@ -155,57 +157,57 @@ def test_Command_subclassing_keeps_templates_from_all_parent_classes():
         command_second = 'second'
         command_overwrite = 'second overwrite'
 
-    runner = SecondRunner({})
+    command = SecondRunner({})
 
     attrs = ('command_first', 'command_second', 'command_overwrite')
     for attr in attrs:
-        assert callable(getattr(runner, attr))
+        assert callable(getattr(command, attr))
 
 
 def test_Command_instantiated_more_times(run_cmd):
-    class Runner(Command):
-        template = 'command template {-o OPT}'
+    class MyCommand(Command):
+        attribute = 'command attribute {-o OPT}'
 
         def run(self, *args, **kwargs):
-            self.template()
+            self.attribute()
 
-    runner0 = Runner({'OPT': 'argument'}, runner=run_cmd)
-    runner0()
+    command0 = MyCommand({'OPT': 'argument'}, runner=run_cmd)
+    command0()
 
-    run_cmd.assert_called_with('command template -o argument')
+    run_cmd.assert_called_with('command attribute -o argument')
 
-    runner1 = Runner({'OPT': 'argument'}, runner=run_cmd)
-    runner1()
+    command1 = MyCommand({'OPT': 'argument'}, runner=run_cmd)
+    command1()
 
-    run_cmd.assert_called_with('command template -o argument')
+    run_cmd.assert_called_with('command attribute -o argument')
 
 
-def test_Command_subclassing_with_overwriting_templates_as_methods_and_calling_super():
+def test_Command_subclassing_with_overwriting_attributes_as_methods_and_calling_super():
     command_stream = []
 
     def run(cmd):
         command_stream.append(cmd)
         return 0, 'out', 'err'
 
-    class Runner(Command):
-        template = 'command {OPTION}'
+    class MyCommand(Command):
+        attribute = 'command {OPTION}'
 
         def run(self, *args, **kwargs):
-            self.template()
+            self.attribute()
 
-    class SubRunner(Runner):
-        def template(self):
-            command_stream.append('subrunner template start')
-            super().template()
-            command_stream.append('subrunner template end')
+    class SubCommand(MyCommand):
+        def attribute(self):
+            command_stream.append('subcommand attribute start')
+            super().attribute()
+            command_stream.append('subcommand attribute end')
 
-    runner = SubRunner({'OPTION': 'OK'}, runner=run)
-    runner()
-    runner()
+    command = SubCommand({'OPTION': 'OK'}, runner=run)
+    command()
+    command()
 
-    assert command_stream == ['subrunner template start',
+    assert command_stream == ['subcommand attribute start',
                               'command OK',
-                              'subrunner template end',
-                              'subrunner template start',
+                              'subcommand attribute end',
+                              'subcommand attribute start',
                               'command OK',
-                              'subrunner template end']
+                              'subcommand attribute end']

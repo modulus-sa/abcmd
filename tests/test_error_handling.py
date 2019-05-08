@@ -34,7 +34,7 @@ def test_error_handler_decorator_arguments(args, kwargs, expected):
 def test_Command_calls_handle_error_on_subprocess_error():
     handle_list = []
 
-    class Runner(Command):
+    class MyCommand(Command):
         cat = 'cat NON_EXISTING_FILE'
 
         def run(self, *args, **kwargs):
@@ -45,7 +45,7 @@ def test_Command_calls_handle_error_on_subprocess_error():
             handle_list.append(error)
             return True
 
-    runner = Runner({})
+    runner = MyCommand({})
     runner()
 
     assert handle_list == ['cat NON_EXISTING_FILE',
@@ -55,7 +55,7 @@ def test_Command_calls_handle_error_on_subprocess_error():
 def test_Command_stops_if_handle_error_returns_False():
     handle_list = []
 
-    class Runner(Command):
+    class MyCommand(Command):
         echo = 'echo HEY'
         cat = 'cat NON_EXISTING_FILE'
 
@@ -70,7 +70,7 @@ def test_Command_stops_if_handle_error_returns_False():
         def handle_error(self, cmd, error):
             return False
 
-    runner = Runner({})
+    runner = MyCommand({})
     with pytest.raises(sp.SubprocessError):
         runner()
 
@@ -83,7 +83,7 @@ def test_error_handler_decorator_runs():
     def run(cmd):
         return 1, 'out', 'ERROR OUTPUT'
 
-    class Runner(Command):
+    class MyCommand(Command):
         cmd = 'command with args'
 
         def run(self, *args, **kwargs):
@@ -91,18 +91,18 @@ def test_error_handler_decorator_runs():
 
         @error_handler('cmd', 'ERROR OUTPUT')
         def handle_some_error(self, error):
-            assert isinstance(self, Runner)
+            assert isinstance(self, MyCommand)
             command_flow.append('handle_some_error')
             return True
 
-    runner = Runner({}, runner=run)
+    runner = MyCommand({}, runner=run)
     runner()
 
     assert command_flow
 
 
 def test_CommandRunner_get_error_handlers():
-    class Runner(Command):
+    class MyCommand(Command):
         command = 'command with args'
 
         def run(self, *args, **kwargs):
@@ -124,27 +124,27 @@ def test_CommandRunner_get_error_handlers():
         def handler3(self, error):
             ...
 
-    runner = Runner({})
+    runner = MyCommand({})
     command = runner.command
 
     command.error, command.rc = ('error0', 1)
     handlers = command.get_error_handlers()
-    expected_handlers = [Runner.handler0, Runner.handler2]
+    expected_handlers = [MyCommand.handler0, MyCommand.handler2]
     assert sorted(handlers, key=str) == sorted(expected_handlers, key=str)
 
     command.error, command.rc = ('error1', 1)
     handlers = command.get_error_handlers()
-    expected_handlers = [Runner.handler1, Runner.handler2]
+    expected_handlers = [MyCommand.handler1, MyCommand.handler2]
     assert sorted(handlers, key=str) == sorted(expected_handlers, key=str)
 
     command.error, command.rc = ('error', 10)
     handlers = command.get_error_handlers()
-    expected_handlers = [Runner.handler2, Runner.handler3]
+    expected_handlers = [MyCommand.handler2, MyCommand.handler3]
     assert sorted(handlers, key=str) == sorted(expected_handlers, key=str)
 
     command.error, command.rc = ('error1', 10)
     handlers = command.get_error_handlers()
-    expected_handlers = [Runner.handler1, Runner.handler2, Runner.handler3]
+    expected_handlers = [MyCommand.handler1, MyCommand.handler2, MyCommand.handler3]
     assert sorted(handlers, key=str) == sorted(expected_handlers, key=str)
 
 
@@ -154,7 +154,7 @@ def test_subclass_inherits_error_handler_decorated_methods():
     def run(cmd):
         return 1, 'out', 'ERROR OUTPUT WITH MORE INFO'
 
-    class Runner(Command):
+    class MyCommand(Command):
         cmd = 'command with args'
 
         def run(self, *args, **kwargs):
@@ -162,11 +162,11 @@ def test_subclass_inherits_error_handler_decorated_methods():
 
         @error_handler('cmd', 'ERROR OUTPUT .*')
         def handle_some_error(self, error):
-            assert isinstance(self, Runner)
+            assert isinstance(self, MyCommand)
             command_flow.append('handle_some_error')
             return True
 
-    class SubRunner(Runner):
+    class SubRunner(MyCommand):
         @error_handler('cmd', 'ERROR OUTPUT .*')
         def another_error_handler(self, error):
             command_flow.append('another_error_handler')

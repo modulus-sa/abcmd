@@ -97,56 +97,59 @@ class CommandFormatter(Formatter):
         return val
 
 
-class CommandSpec:
+class CommandDescriptor:
     def __init__(self, name, template):
         self.name = name
         self.template = template
         self.runners = {}
 
-    def __get__(self, cmd_obj, cls):
-        if not cmd_obj:
+    def __get__(self, command, cls):
+        if not command:
             return self
-        if cmd_obj in self.runners:
-            return self.runners[cmd_obj]
+        if command in self.runners:
+            return self.runners[command]
 
-        runner = CommandRunner(self.name, cmd_obj, self.template)
-        self.runners[cmd_obj] = runner
+        runner = CommandField(self.name, command, self.template)
+        self.runners[command] = runner
         return runner
 
 
-class CommandRunner:
+class CommandField:
 
-    def __init__(self, name, cmd_obj, template):
+    def __init__(self, name, command, template):
         self.name = name
-        self.cmd_obj = cmd_obj
+        self.command = command
         self.template = template
 
     def __call__(self, *args, **kwargs):
-        self.command = self.cmd_obj._formatter(self.template)
-        self.rc, self.output, self.error = self.cmd_obj._runner(self.command)
+        self.rc, self.output, self.error = self.command._runner(str(self))
         if self.rc != 0:
             self.handle_error()
         return self.output, self.error, self.rc
+
+    def __str__(self):
+        self._formatted_command = self.command._formatter(self.template)
+        return self._formatted_command
 
     def handle_error(self):
         handlers = self.get_error_handlers()
 
         if handlers:
             for handler in handlers:
-                if not handler(self.cmd_obj, self.error):
+                if not handler(self.command, self.error):
                     break
             else:
                 return
-        elif hasattr(self.cmd_obj, 'handle_error'):
-            if self.cmd_obj.handle_error(self.command, self.error):
+        elif hasattr(self.command, 'handle_error'):
+            if self.command.handle_error(self._formatted_command, self.error):
                 return
 
-        msg = '{}: {}'.format(self.command, self.error)
+        msg = '{}: {}'.format(self._formatted_command, self.error)
         logging.error('Unhandled error: ' + msg)
         raise sp.SubprocessError(msg)
 
     def get_error_handlers(self):
-        return [handler for handler in self.cmd_obj._handlers
+        return [handler for handler in self.command._handlers
                 if self.is_matching_handler(handler)]
 
     def is_matching_handler(self, handler):
@@ -170,18 +173,19 @@ class MetaCommand(abc.ABCMeta):
         if not bases:
             return super().__new__(cls, name, bases, namespace)
 
-        handlers = [handler for base in bases
-                    for handler in getattr(base, '_handlers', ())]
+        # gather from parent classes as well
+        error_handlers = [handler for base in bases
+                          for handler in getattr(base, '_handlers', ())]
 
         for key, val in namespace.items():
             if key.startswith('_'):
                 continue
             elif isinstance(val, str):
-                namespace[key] = CommandSpec(key, val)
+                namespace[key] = CommandDescriptor(key, val)
             elif callable(val) and hasattr(val, '_handler'):
-                handlers.append(val)
+                error_handlers.append(val)
 
-        namespace['_handlers'] = handlers
+        namespace['_handlers'] = error_handlers
 
         return super().__new__(cls, name, bases, namespace)
 
