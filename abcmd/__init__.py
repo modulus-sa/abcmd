@@ -1,8 +1,8 @@
 """abcmd - ABCs & Mixins for wrapping commands with static configuration."""
 
-__version__ = '0.4.0'
-__author__ = 'Konstantinos Tsakiltzidis <ktsakiltzidis@modulus.gr>'
-__all__ = ('Command',)
+__version__ = "0.4.0"
+__author__ = "Konstantinos Tsakiltzidis <ktsakiltzidis@modulus.gr>"
+__all__ = ("Command",)
 
 
 import abc
@@ -22,8 +22,10 @@ else:
     from typing import Any, Union, Sequence, Mapping, Callable
 
 if sys.version_info.minor < 3:
+
     class SubprocessError(Exception):
         """Called when a process errors for python < 3.4"""
+
     sp.SubprocessError = SubprocessError
 
 
@@ -65,33 +67,32 @@ class CommandFormatter(Formatter):
         config = {}
         for key, val in self._config.items():
             if isinstance(val, bool):
-                config[key] = '--' + key.lower().replace('_', '-') if val else ''
+                config[key] = "--" + key.lower().replace("_", "-") if val else ""
             else:
                 config[key] = val
         # remove whitespace between args caused by empty optional parameters
-        return ' '.join(self.format(template, **config).split())
+        return " ".join(self.format(template, **config).split())
 
-    def get_value(self,
-                  key: Union[str, int],
-                  args: Sequence[Any],
-                  kwargs: Mapping[str, Any]) -> Any:
+    def get_value(
+        self, key: Union[str, int], args: Sequence[Any], kwargs: Mapping[str, Any]
+    ) -> Any:
         if not isinstance(key, str):
-            return ''
-        flag = ''
-        if key.startswith('-'):
+            return ""
+        flag = ""
+        if key.startswith("-"):
             flag, key, *_ = key.split()
 
         val = super().get_value(key, args, kwargs)
 
         if not val and val != 0:
-            val = ''
+            val = ""
         elif isinstance(val, (str, int)):
             if flag:
-                val = '{} {}'.format(flag, val)
+                val = "{} {}".format(flag, val)
         elif isinstance(val, cabc.Iterable):
             if flag:
-                val = ('{} {}'.format(flag, v) for v in val)
-            val = ' '.join(map(str, val))
+                val = ("{} {}".format(flag, v) for v in val)
+            val = " ".join(map(str, val))
         else:
             val = str(val)
         return val
@@ -115,7 +116,6 @@ class CommandDescriptor:
 
 
 class Process:
-
     def __init__(self, name, command, template):
         self.name = name
         self.command = command
@@ -140,32 +140,35 @@ class Process:
                     break
             else:
                 return
-        elif hasattr(self.command, 'handle_error'):
+        elif hasattr(self.command, "handle_error"):
             if self.command.handle_error(self._formatted_command, self.error):
                 return
 
-        msg = '{}: {}'.format(self._formatted_command, self.error)
-        logging.error('Unhandled error: ' + msg)
+        msg = "{}: {}".format(self._formatted_command, self.error)
+        logging.error("Unhandled error: " + msg)
         raise sp.SubprocessError(msg)
 
     def get_error_handlers(self):
-        return [handler for handler in self.command._handlers
-                if self.is_matching_handler(handler)]
+        return [
+            handler
+            for handler in self.command._handlers
+            if self.is_matching_handler(handler)
+        ]
 
     def is_matching_handler(self, handler):
-        command_name = handler._handler['command']
+        command_name = handler._handler["command"]
         if command_name and self.name != command_name:
             return False
-        error_pattern = handler._handler['error']
+        error_pattern = handler._handler["error"]
         if error_pattern and not re.search(error_pattern, self.error):
             return False
-        rc_pattern = handler._handler['rc']
+        rc_pattern = handler._handler["rc"]
         if rc_pattern and rc_pattern != self.returncode:
             return False
         return True
 
     def __repr__(self):
-        return '{} runner at {}'.format(self.name, id(self))
+        return "{} runner at {}".format(self.name, id(self))
 
 
 class MetaCommand(abc.ABCMeta):
@@ -174,18 +177,19 @@ class MetaCommand(abc.ABCMeta):
             return super().__new__(cls, name, bases, namespace)
 
         # gather from parent classes as well
-        error_handlers = [handler for base in bases
-                          for handler in getattr(base, '_handlers', ())]
+        error_handlers = [
+            handler for base in bases for handler in getattr(base, "_handlers", ())
+        ]
 
         for key, val in namespace.items():
-            if key.startswith('_'):
+            if key.startswith("_"):
                 continue
             elif isinstance(val, str):
                 namespace[key] = CommandDescriptor(key, val)
-            elif callable(val) and hasattr(val, '_handler'):
+            elif callable(val) and hasattr(val, "_handler"):
                 error_handlers.append(val)
 
-        namespace['_handlers'] = error_handlers
+        namespace["_handlers"] = error_handlers
 
         return super().__new__(cls, name, bases, namespace)
 
@@ -230,6 +234,7 @@ class Command(metaclass=MetaCommand):
 
 
     """
+
     def __init__(self, config: Mapping, *, runner: Callable = None) -> None:
         self._config = config
         self._runner = runner if runner is not None else _run_cmd
@@ -237,15 +242,15 @@ class Command(metaclass=MetaCommand):
 
     def __call__(self, *args: Any, **kwargs: Any) -> None:
         """Run the procedure."""
-        if hasattr(self, 'dont_run') and self.dont_run():
+        if hasattr(self, "dont_run") and self.dont_run():
             return
 
-        if hasattr(self, 'before_run'):
+        if hasattr(self, "before_run"):
             self.before_run()
 
         self.run(*args, **kwargs)
 
-        if hasattr(self, 'after_run'):
+        if hasattr(self, "after_run"):
             self.after_run()
 
     @property
@@ -268,11 +273,13 @@ def _run_cmd(cmd: str) -> str:
         out = out.decode()
         error = error.decode()
     except UnicodeDecodeError:
-        msg = ('Unicode error while decoding command output, '
-               'replacing offending characters.')
+        msg = (
+            "Unicode error while decoding command output, "
+            "replacing offending characters."
+        )
         logging.warning(msg)
-        out = out.decode(errors='replace')
-        error = error.decode(errors='replace')
+        out = out.decode(errors="replace")
+        error = error.decode(errors="replace")
 
     return (proc.returncode, out, error)
 
@@ -281,10 +288,9 @@ def error_handler(command=None, error=None, rc=None):
     """Method decorator for handling specific errors.
     First argument is command to match too, the second argument
     is a regular expression to match the error."""
+
     def wrapper(func):
-        func._handler = {'command': command,
-                         'error': error,
-                         'rc': rc}
+        func._handler = {"command": command, "error": error, "rc": rc}
         return func
 
     return wrapper

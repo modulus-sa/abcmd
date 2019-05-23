@@ -5,7 +5,7 @@ import pytest
 
 @pytest.fixture()
 def run_cmd(mocker):
-    return mocker.Mock(return_value=(0, 'out', 'err'))
+    return mocker.Mock(return_value=(0, "out", "err"))
 
 
 def test_Command_init_arguments():
@@ -16,7 +16,9 @@ def test_Command_init_arguments():
     with pytest.raises(TypeError) as err:
         MyCommand()
 
-    assert str(err).endswith("__init__() missing 1 required positional argument: 'config'")
+    assert str(err).endswith(
+        "__init__() missing 1 required positional argument: 'config'"
+    )
 
 
 def test_Command_run():
@@ -24,19 +26,19 @@ def test_Command_run():
 
     class MyCommand(Command):
         def run(self, *args, **kwargs):
-            call_list.append('run')
+            call_list.append("run")
 
     command = MyCommand({})
 
     command()
 
-    assert call_list == ['run']
+    assert call_list == ["run"]
 
 
 def test_Command_creates_callables_and_proper_naming():
     class MyCommand(Command):
-        attribute0 = 'command one'
-        attribute1 = 'command two'
+        attribute0 = "command one"
+        attribute1 = "command two"
 
         def run(self):
             pass
@@ -44,37 +46,36 @@ def test_Command_creates_callables_and_proper_naming():
     command = MyCommand({})
 
     assert callable(command.attribute0)
-    assert command.attribute0.name == 'attribute0'
-    assert repr(command.attribute0).startswith('attribute0 runner')
-    assert str(command.attribute0) == 'command one'
+    assert command.attribute0.name == "attribute0"
+    assert repr(command.attribute0).startswith("attribute0 runner")
+    assert str(command.attribute0) == "command one"
 
     assert callable(command.attribute1)
-    assert command.attribute1.name == 'attribute1'
-    assert repr(command.attribute1).startswith('attribute1 runner')
-    assert str(command.attribute1) == 'command two'
+    assert command.attribute1.name == "attribute1"
+    assert repr(command.attribute1).startswith("attribute1 runner")
+    assert str(command.attribute1) == "command two"
 
 
 def test_Command_call_attributes(run_cmd):
-
     class MyCommand(Command):
-        attribute = 'command attribute {-o OPT}'
+        attribute = "command attribute {-o OPT}"
 
         def run(self, *args, **kwargs):
             self.attribute()
 
-    command = MyCommand({'OPT': 'argument'}, runner=run_cmd)
+    command = MyCommand({"OPT": "argument"}, runner=run_cmd)
     command()
 
-    assert command.attribute.name == 'attribute'
-    run_cmd.assert_called_with('command attribute -o argument')
+    assert command.attribute.name == "attribute"
+    run_cmd.assert_called_with("command attribute -o argument")
 
 
 def test_Command_calling_attributes_returns_Process():
     def run(cmd):
-        return 0, 'out', 'err'
+        return 0, "out", "err"
 
     class MyCommand(Command):
-        attribute = 'command attribute'
+        attribute = "command attribute"
 
         def run(self, *args, **kwargs):
             self.attribute()
@@ -83,9 +84,9 @@ def test_Command_calling_attributes_returns_Process():
     proc = command.attribute()
 
     assert isinstance(proc, Process)
-    assert proc.output == 'out'
+    assert proc.output == "out"
     assert proc.returncode == 0
-    assert proc.error == 'err'
+    assert proc.error == "err"
 
 
 def test_Command_dont_run_prevents_calling_run():
@@ -93,7 +94,7 @@ def test_Command_dont_run_prevents_calling_run():
 
     class MyCommand(Command):
         def run(self):
-            call_list.append('run')
+            call_list.append("run")
 
         def dont_run(self):
             return True
@@ -106,7 +107,7 @@ def test_Command_dont_run_prevents_calling_run():
 
 def test_Command_caches_attributed_functions():
     class MyCommand(Command):
-        echo = 'echo HEY'
+        echo = "echo HEY"
 
         def run(self):
             pass
@@ -125,34 +126,34 @@ def test_Command_on_config_change_clears_caches():
 
     def run(cmd):
         command_stream.append(cmd)
-        return 0, 'out', 'err'
+        return 0, "out", "err"
 
     class MyCommand(Command):
-        command = 'command {OPTION}'
+        command = "command {OPTION}"
 
         def run(self):
             self.command()
 
-    command = MyCommand({'OPTION': 'option'}, runner=run)
+    command = MyCommand({"OPTION": "option"}, runner=run)
     command()
-    assert command_stream.pop() == 'command option'
+    assert command_stream.pop() == "command option"
 
-    command.config['OPTION'] = 'changed'
+    command.config["OPTION"] = "changed"
     command()
-    assert command_stream.pop() == 'command changed'
+    assert command_stream.pop() == "command changed"
 
 
 def test_Command_runs_run_before_and_run_after_if_they_are_defined():
     command_stream = []
 
     class MyCommand(Command):
-        cmd = 'command {OPTION}'
+        cmd = "command {OPTION}"
 
         def before_run(self):
-            command_stream.append('before')
+            command_stream.append("before")
 
         def after_run(self):
-            command_stream.append('after')
+            command_stream.append("after")
 
         def run(self):
             pass
@@ -160,45 +161,44 @@ def test_Command_runs_run_before_and_run_after_if_they_are_defined():
     command = MyCommand({})
     command()
 
-    assert command_stream == ['before', 'after']
+    assert command_stream == ["before", "after"]
 
 
 def test_Command_subclassing_keeps_attributes_from_all_parent_classes():
-
     class FirstRunner(Command):
-        command_first = 'first'
-        command_override = 'first override'
+        command_first = "first"
+        command_override = "first override"
 
         def run(self):
             pass
 
     class SecondRunner(FirstRunner):
-        command_second = 'second'
-        command_override = 'second override'
+        command_second = "second"
+        command_override = "second override"
 
     command = SecondRunner({})
 
-    attrs = ('command_first', 'command_second', 'command_override')
+    attrs = ("command_first", "command_second", "command_override")
     for attr in attrs:
         assert callable(getattr(command, attr))
 
 
 def test_Command_instantiated_more_times(run_cmd):
     class MyCommand(Command):
-        attribute = 'command attribute {-o OPT}'
+        attribute = "command attribute {-o OPT}"
 
         def run(self, *args, **kwargs):
             self.attribute()
 
-    command0 = MyCommand({'OPT': 'argument'}, runner=run_cmd)
+    command0 = MyCommand({"OPT": "argument"}, runner=run_cmd)
     command0()
 
-    run_cmd.assert_called_with('command attribute -o argument')
+    run_cmd.assert_called_with("command attribute -o argument")
 
-    command1 = MyCommand({'OPT': 'argument'}, runner=run_cmd)
+    command1 = MyCommand({"OPT": "argument"}, runner=run_cmd)
     command1()
 
-    run_cmd.assert_called_with('command attribute -o argument')
+    run_cmd.assert_called_with("command attribute -o argument")
 
 
 def test_Command_subclassing_with_override_attributes_as_methods_and_calling_super():
@@ -206,27 +206,29 @@ def test_Command_subclassing_with_override_attributes_as_methods_and_calling_sup
 
     def run(cmd):
         command_stream.append(cmd)
-        return 0, 'out', 'err'
+        return 0, "out", "err"
 
     class MyCommand(Command):
-        attribute = 'command {OPTION}'
+        attribute = "command {OPTION}"
 
         def run(self, *args, **kwargs):
             self.attribute()
 
     class SubCommand(MyCommand):
         def attribute(self):
-            command_stream.append('subcommand attribute start')
+            command_stream.append("subcommand attribute start")
             super().attribute()
-            command_stream.append('subcommand attribute end')
+            command_stream.append("subcommand attribute end")
 
-    command = SubCommand({'OPTION': 'OK'}, runner=run)
+    command = SubCommand({"OPTION": "OK"}, runner=run)
     command()
     command()
 
-    assert command_stream == ['subcommand attribute start',
-                              'command OK',
-                              'subcommand attribute end',
-                              'subcommand attribute start',
-                              'command OK',
-                              'subcommand attribute end']
+    assert command_stream == [
+        "subcommand attribute start",
+        "command OK",
+        "subcommand attribute end",
+        "subcommand attribute start",
+        "command OK",
+        "subcommand attribute end",
+    ]
